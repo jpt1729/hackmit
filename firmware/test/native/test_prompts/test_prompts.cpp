@@ -1,7 +1,8 @@
 #include <unity.h>
 #include "prompts.h"
 #include "activity.h"
-#include "haptics.h"
+#include "buzzer.h"
+#include "leds.h"
 #include "config.h"
 #include "test_support.h"
 
@@ -14,7 +15,9 @@ void setUp() {
   resetMocks();
   mock::imuPresent = false;   // most tests drive g_state.activity by hand
   eventsInit();
-  hapticsInit();
+  buzzerInit();
+  ledsInit();
+  ledsBootDone();
   activityInit();
   promptsInit();
   MEDS = promptsFindById("meds_9am");
@@ -26,7 +29,8 @@ void tearDown() {}
 static void loopTick() {
   activityTick();
   promptsTick();
-  hapticsTick();
+  buzzerTick();
+  ledsTick();
 }
 static void run(uint32_t ms) { runFor(ms, loopTick); }
 
@@ -95,7 +99,8 @@ void test_fires_at_slot_and_buzzes() {
   run(3000);
   TEST_ASSERT_EQUAL(1, countEvents("prompt_fired", "meds_9am"));
   TEST_ASSERT_EQUAL(MEDS, g_state.pendingPrompt);
-  TEST_ASSERT_GREATER_THAN(0, mock::pwmWrites);
+  TEST_ASSERT_GREATER_THAN(0, mock::toneWrites);
+  TEST_ASSERT_EQUAL(LED_PROMPT, ledsMode());
 }
 
 void test_room_gate_holds_until_right_room() {
@@ -153,7 +158,34 @@ void test_held_past_window_is_missed_without_firing() {
   TEST_ASSERT_EQUAL(0, countEvents("prompt_fired"));   // too late now
 }
 
+void test_away_from_home_holds_the_routine() {
+  // Out for a walk: the 12:30 lunch prompt waits until they are back.
+  g_state.awayFromHome = true;
+  mock::epoch = at(12, 30);
+  run(10 * 60000);
+  TEST_ASSERT_EQUAL(0, countEvents("prompt_fired"));
+  g_state.awayFromHome = false;
+  run(2000);
+  TEST_ASSERT_EQUAL(1, countEvents("prompt_fired", "lunch"));
+}
+
 // ---------- ack / rebuzz / miss ----------
+
+void test_dashboard_ack_resolves_the_prompt() {
+  mock::epoch = at(9, 0);
+  run(2000);
+  TEST_ASSERT_EQUAL(MEDS, g_state.pendingPrompt);
+  TEST_ASSERT_TRUE(promptsAckPending());
+  TEST_ASSERT_EQUAL(1, countEvents("prompt_acked", "meds_9am"));
+  TEST_ASSERT_EQUAL(-1, g_state.pendingPrompt);
+  run(1000);
+  TEST_ASSERT_EQUAL(LED_ACK, ledsMode());
+}
+
+void test_dashboard_ack_with_nothing_pending() {
+  TEST_ASSERT_FALSE(promptsAckPending());
+  TEST_ASSERT_EQUAL(0, countEvents("prompt_acked"));
+}
 
 void test_shake_acks_pending_prompt() {
   withImu();
@@ -185,14 +217,14 @@ void test_rebuzz_once_mid_window() {
   run(1000);
   TEST_ASSERT_EQUAL(MEDS, g_state.pendingPrompt);
   run(5000);
-  TEST_ASSERT_EQUAL(0, mock::pwm[PIN_VIBE]);         // first buzz finished
+  TEST_ASSERT_EQUAL(0, mock::toneFreq);              // first chime finished
   int on = 0;
   for (int i = 0; i < 6000; i++) {                   // watch 25s..55s after fire
     run(10);
-    if (i > 1900 && mock::pwm[PIN_VIBE] > 0) on++;
+    if (i > 1900 && mock::toneFreq > 0) on++;
   }
   TEST_ASSERT_GREATER_THAN(0, on);
-  TEST_ASSERT_EQUAL(0, mock::pwm[PIN_VIBE]);
+  TEST_ASSERT_EQUAL(0, mock::toneFreq);
 }
 
 void test_no_ack_is_missed_after_window() {
@@ -269,6 +301,9 @@ int main() {
   RUN_TEST(test_not_worn_holds_then_fires_on_wear);
   RUN_TEST(test_sleeping_holds);
   RUN_TEST(test_held_past_window_is_missed_without_firing);
+  RUN_TEST(test_away_from_home_holds_the_routine);
+  RUN_TEST(test_dashboard_ack_resolves_the_prompt);
+  RUN_TEST(test_dashboard_ack_with_nothing_pending);
   RUN_TEST(test_shake_acks_pending_prompt);
   RUN_TEST(test_shake_before_prompt_does_not_ack_it);
   RUN_TEST(test_rebuzz_once_mid_window);

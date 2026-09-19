@@ -15,15 +15,24 @@
 #ifndef ENABLE_DISPLAY
 #define ENABLE_DISPLAY 1
 #endif
+#ifndef ENABLE_LEDS
+#define ENABLE_LEDS 1
+#endif
+#ifndef ENABLE_GPS
+#define ENABLE_GPS 1
+#endif
 
-#define PIN_SDA       21
+// ---------------------------------------------------------------- pins
+#define PIN_SDA       21   // MPU-6050 + SSD1306 share this bus
 #define PIN_SCL       22
 #define MPU_ADDR      0x68
 #define OLED_ADDR     0x3C
-#define PIN_VIBE      25
-#define VIBE_DUTY     153
-#define PIN_ELECTRODE 34   // must be ADC1 (GPIO 32-39): ADC2 doesn't work while WiFi is on
+#define PIN_BUZZER    26   // piezo + 100 R to GND
+#define PIN_LEDS      27   // NeoPixel ring DIN through 330 R
+#define PIN_GPS_RX    16   // ESP32 RX2  <- GT-U7 TX
+#define PIN_GPS_TX    17   // ESP32 TX2  -> GT-U7 RX (config only; unused in normal operation)
 
+// ---------------------------------------------------------------- activity (MPU-6050)
 #define ACT_SAMPLE_HZ       10
 #define ACT_EMA_ALPHA       0.1f
 #define MOVE_THRESH_G       0.06f
@@ -35,10 +44,32 @@
 #define WANDER_END_H        5
 #define WANDER_COOLDOWN_MIN 30
 
-#define WEAR_ADC_MIN     300
-#define WEAR_ADC_MAX     3000
-#define WEAR_DEBOUNCE_MS 5000
+// ---------------------------------------------------------------- wear (inferred from the IMU)
+// No electrode in the BOM: a worn device always shows micro-motion (breathing,
+// pulse, tiny drift). A device on a table is dead still. That is the signal.
+#define WEAR_MICRO_G       0.012f   // above this = a body is attached
+#define WEAR_SAMPLE_MS     500
+#define WEAR_ON_DEBOUNCE_MS  3000   // motion this long -> worn
+#define WEAR_OFF_STILL_MS  300000   // 5 min of dead stillness -> taken off
 
+// ---------------------------------------------------------------- buzzer (piezo)
+// Passive piezo (the bare disc / 2-pin module): driven with LEDC tones.
+// Set to 0 for an active buzzer module, which has its own oscillator and only
+// takes on/off - the same patterns then play at whatever pitch it has.
+#define BUZZER_PASSIVE      1
+#define BUZZER_RES_BITS     10      // duty range 0..1023
+#define BUZZER_DUTY_GENTLE  60      // ~6%: a chime across the room, not an alarm
+#define BUZZER_DUTY_REMIND  110
+#define BUZZER_DUTY_ALERT   240
+#define BUZZER_LEDC_CHANNEL 0
+
+// ---------------------------------------------------------------- LED ring (NeoPixel)
+#define LED_COUNT          12
+#define LED_BRIGHTNESS     40      // 0-255. Dim on purpose: it is a night-time device.
+#define LED_FRAME_MS       40      // 25 fps animation tick
+#define LED_ACK_FLASH_MS   3000
+
+// ---------------------------------------------------------------- location (WiFi RSSI)
 #define LOC_SCAN_INTERVAL_MS 15000
 #define LOC_DEBOUNCE_SCANS   2
 #define LOC_MIN_CONFIDENCE   20
@@ -53,6 +84,23 @@ static const RoomFP ROOM_FPS[] = {
 };
 #define NUM_ROOM_FPS (sizeof(ROOM_FPS) / sizeof(ROOM_FPS[0]))
 
+// ---------------------------------------------------------------- GPS (GT-U7 / NEO-6M)
+#define GPS_BAUD            9600
+#define GPS_STALE_MS        15000   // no valid sentence for this long -> fix is stale
+// Geofence: home is the centre, the radius is "still in the garden".
+#define HOME_LAT            42.360100    // replace on site: read GET /state once outside
+#define HOME_LON           -71.094200
+#define GEOFENCE_RADIUS_M   80.0f
+#define GEOFENCE_HYST_M     25.0f   // must come back this far inside before "returned"
+#define GEOFENCE_CONFIRM    3       // consecutive fixes agreeing before an event
+#define GPS_MIN_SATS        4
+
+// ---------------------------------------------------------------- safety chimes
+#define SAFETY_REPEAT_MS    120000   // while away from home, re-chime this often
+#define SAFETY_MAX_CHIMES   5        // then stop nagging; the caregiver has the alert
+#define SAFETY_WANDER_MS    300000   // night-wander chime cooldown
+
+// ---------------------------------------------------------------- prompts
 struct PromptDef { uint8_t hour, minute; const char* id; const char* label; Room room; };
 
 static const PromptDef SCHEDULE[] = {

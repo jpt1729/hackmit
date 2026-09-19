@@ -1,85 +1,103 @@
 #include <unity.h>
 #include "wear.h"
+#include "activity.h"
 #include "config.h"
 #include "test_support.h"
 
 DeviceState g_state;
 
-static const int ON_SKIN = (WEAR_ADC_MIN + WEAR_ADC_MAX) / 2;
-static const int OPEN_HIGH = 4095;
-static const int OPEN_LOW = 0;
-
 void setUp() {
   resetMocks();
   eventsInit();
-  mock::adc[PIN_ELECTRODE] = ON_SKIN;
+  activityInit();
   wearInit();
 }
 void tearDown() {}
 
-static void hold(int adc, uint32_t ms) {
-  mock::adc[PIN_ELECTRODE] = adc;
-  runFor(ms, wearTick, 50);
+// Wear is inferred from the IMU, so every case here is really "what does the
+// accelerometer look like in this situation".
+static void run(uint32_t ms) {
+  runFor(ms, [] { activityTick(); wearTick(); }, 100);
 }
 
-void test_electrode_is_on_adc1() {
-  // ADC2 pins read garbage while WiFi is on.
-  TEST_ASSERT_TRUE(PIN_ELECTRODE >= 32 && PIN_ELECTRODE <= 39);
+// A device on a body: never perfectly still, even when the person is not
+// "moving" (amplitude stays under MOVE_THRESH_G on purpose).
+static void onBody(uint32_t ms, float amplitude = 0.04f) {
+  for (uint32_t t = 0; t < ms; t += 100) {
+    mock::accelZ = 1.0f + ((t / 100) % 2 ? amplitude : -amplitude);
+    mock::advance(100);
+    activityTick();
+    wearTick();
+  }
+}
+
+// A device on a nightstand: the same number every sample.
+static void onTable(uint32_t ms) {
+  mock::accelZ = 1.0f;
+  run(ms);
 }
 
 void test_starts_worn_without_events() {
-  hold(ON_SKIN, 10000);
+  onBody(10000);
   TEST_ASSERT_TRUE(g_state.worn);
   TEST_ASSERT_EQUAL(0, countEvents("wear_on") + countEvents("wear_off"));
 }
 
-void test_removal_is_debounced() {
-  hold(OPEN_HIGH, WEAR_DEBOUNCE_MS - 500);
+void test_micro_motion_counts_as_worn() {
+  // Sitting still or asleep: tiny motion, well below the "moving" threshold.
+  onBody(WEAR_OFF_STILL_MS + 30000, WEAR_MICRO_G * 3.0f);
   TEST_ASSERT_TRUE(g_state.worn);
-  hold(OPEN_HIGH, 1000);
+  TEST_ASSERT_NOT_EQUAL(MOVING, g_state.activity);
+  TEST_ASSERT_EQUAL(0, countEvents("wear_off"));
+}
+
+void test_brief_stillness_is_not_removal() {
+  onTable(WEAR_OFF_STILL_MS - 30000);
+  TEST_ASSERT_TRUE(g_state.worn);
+  TEST_ASSERT_EQUAL(0, countEvents("wear_off"));
+}
+
+void test_dead_still_means_taken_off() {
+  onTable(WEAR_OFF_STILL_MS + 5000);
   TEST_ASSERT_FALSE(g_state.worn);
   TEST_ASSERT_EQUAL(1, countEvents("wear_off"));
 }
 
-void test_low_rail_also_means_off() {
-  hold(OPEN_LOW, WEAR_DEBOUNCE_MS + 500);
-  TEST_ASSERT_FALSE(g_state.worn);
-}
-
 void test_put_back_on() {
-  hold(OPEN_HIGH, WEAR_DEBOUNCE_MS + 500);
-  hold(ON_SKIN, WEAR_DEBOUNCE_MS + 500);
+  onTable(WEAR_OFF_STILL_MS + 5000);
+  TEST_ASSERT_FALSE(g_state.worn);
+  onBody(WEAR_ON_DEBOUNCE_MS + 4000);
   TEST_ASSERT_TRUE(g_state.worn);
   TEST_ASSERT_EQUAL(1, countEvents("wear_off"));
   TEST_ASSERT_EQUAL(1, countEvents("wear_on"));
 }
 
-void test_brief_contact_loss_is_ignored() {
-  for (int i = 0; i < 5; i++) {
-    hold(OPEN_HIGH, WEAR_DEBOUNCE_MS - 1000);   // sleeve rubs, strap shifts
-    hold(ON_SKIN, 600);
-  }
+void test_a_nudge_of_the_table_does_not_look_like_wearing() {
+  onTable(WEAR_OFF_STILL_MS + 5000);
+  onBody(700);                                  // someone walks past and bumps it
+  onTable(5000);
+  TEST_ASSERT_FALSE(g_state.worn);
+  TEST_ASSERT_EQUAL(0, countEvents("wear_on"));
+}
+
+void test_no_imu_fails_open() {
+  // A dead IMU must not mute every prompt for the rest of the day.
+  mock::imuPresent = false;
+  activityInit();
+  wearInit();
+  run(WEAR_OFF_STILL_MS + 10000);
   TEST_ASSERT_TRUE(g_state.worn);
   TEST_ASSERT_EQUAL(0, countEvents("wear_off"));
 }
 
-void test_band_edges_are_exclusive() {
-  hold(WEAR_ADC_MIN, WEAR_DEBOUNCE_MS + 500);
-  TEST_ASSERT_FALSE(g_state.worn);
-  hold(WEAR_ADC_MIN + 1, WEAR_DEBOUNCE_MS + 500);
-  TEST_ASSERT_TRUE(g_state.worn);
-  hold(WEAR_ADC_MAX, WEAR_DEBOUNCE_MS + 500);
-  TEST_ASSERT_FALSE(g_state.worn);
-}
-
 int main() {
   UNITY_BEGIN();
-  RUN_TEST(test_electrode_is_on_adc1);
   RUN_TEST(test_starts_worn_without_events);
-  RUN_TEST(test_removal_is_debounced);
-  RUN_TEST(test_low_rail_also_means_off);
+  RUN_TEST(test_micro_motion_counts_as_worn);
+  RUN_TEST(test_brief_stillness_is_not_removal);
+  RUN_TEST(test_dead_still_means_taken_off);
   RUN_TEST(test_put_back_on);
-  RUN_TEST(test_brief_contact_loss_is_ignored);
-  RUN_TEST(test_band_edges_are_exclusive);
+  RUN_TEST(test_a_nudge_of_the_table_does_not_look_like_wearing);
+  RUN_TEST(test_no_imu_fails_open);
   return UNITY_END();
 }

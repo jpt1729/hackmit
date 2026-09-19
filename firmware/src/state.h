@@ -29,6 +29,14 @@ struct DeviceState {
   bool     worn           = true;
   bool     wanderFlag     = false;
   int8_t   pendingPrompt  = -1;
+
+  // GPS. `fix` false means every field below it is stale, not zero.
+  bool     fix            = false;
+  uint8_t  sats           = 0;
+  double   lat            = 0.0;
+  double   lon            = 0.0;
+  float    distanceHomeM  = -1.0f;   // < 0 = unknown
+  bool     awayFromHome   = false;   // outside the geofence, debounced
 };
 
 extern DeviceState g_state;

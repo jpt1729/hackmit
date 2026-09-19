@@ -14,22 +14,28 @@
 #include <time.h>
 #include <string>
 #include <vector>
+#include <sys/time.h>
 
 namespace mock {
 inline uint32_t nowMs = 0;         // what millis() returns
 inline time_t   epoch = 0;         // what time() returns (0 = clock not set)
+inline uint32_t carryMs = 0;       // sub-second remainder held by advance()
 inline int      adc[40] = {0};     // analogRead() per pin
 inline int      pwm[40] = {0};     // last analogWrite() per pin
 inline int      pwmWrites = 0;     // total analogWrite() calls
+inline int      pinLevel[40] = {0};// last digitalWrite() per pin
+inline int      toneFreq = 0;      // last ledcWriteTone() frequency, 0 = silent
+inline int      toneDuty = 0;      // last ledcWrite() duty
+inline int      toneWrites = 0;    // total ledc writes
+inline std::string serial2Rx;      // bytes waiting on Serial2 (the GPS)
 inline bool     serialEcho = false;
 
 // Advance both clocks together, like real time passing.
 inline void advance(uint32_t ms) {
-  static uint32_t carry = 0;
   nowMs += ms;
-  carry += ms;
-  epoch += carry / 1000;
-  carry %= 1000;
+  carryMs += ms;
+  epoch += carryMs / 1000;
+  carryMs %= 1000;
 }
 }  // namespace mock
 
@@ -45,9 +51,33 @@ inline time_t mock_time(time_t* t) {
 
 #define INPUT  0x01
 #define OUTPUT 0x03
+#define LOW    0x00
+#define HIGH   0x01
 inline void pinMode(uint8_t, uint8_t) {}
+inline void digitalWrite(uint8_t pin, uint8_t v) { mock::pinLevel[pin] = v; }
 inline int  analogRead(uint8_t pin) { return mock::adc[pin]; }
 inline void analogWrite(uint8_t pin, int v) { mock::pwm[pin] = v; mock::pwmWrites++; }
+
+// LEDC (ESP32 core 2.x signature): what the piezo is actually driven with.
+inline void   ledcSetup(uint8_t, uint32_t, uint8_t) {}
+inline void   ledcAttachPin(uint8_t, uint8_t) {}
+inline double ledcWriteTone(uint8_t, double freq) {
+  mock::toneFreq = (int)freq;
+  mock::toneWrites++;
+  return freq;
+}
+inline void ledcWrite(uint8_t, uint32_t duty) {
+  mock::toneDuty = (int)duty;
+  if (duty == 0) mock::toneFreq = 0;
+  mock::toneWrites++;
+}
+
+// time() is redirected above, so settimeofday() has to move the same clock.
+inline int mock_settimeofday(const struct timeval* tv, const void*) {
+  mock::epoch = tv->tv_sec;
+  return 0;
+}
+#define settimeofday(tv, tz) mock_settimeofday(tv, tz)
 
 template <typename T, typename L, typename H>
 inline T constrain(T x, L lo, H hi) { return x < lo ? (T)lo : (x > hi ? (T)hi : x); }
@@ -97,3 +127,20 @@ class MockSerial {
   void println(const char* s = "") { if (mock::serialEcho) puts(s); }
 };
 inline MockSerial Serial;
+
+// Serial2 is the GT-U7. Tests push NMEA into it with mock::serial2Rx or
+// Serial2.inject(...), and gpsTick() drains it exactly like the real UART.
+#define SERIAL_8N1 0x800001c
+class MockSerial2 {
+ public:
+  void begin(unsigned long, uint32_t = 0, int8_t = -1, int8_t = -1) {}
+  void inject(const char* s) { mock::serial2Rx += s; }
+  int  available() { return (int)mock::serial2Rx.size(); }
+  int  read() {
+    if (mock::serial2Rx.empty()) return -1;
+    int c = (unsigned char)mock::serial2Rx.front();
+    mock::serial2Rx.erase(0, 1);
+    return c;
+  }
+};
+inline MockSerial2 Serial2;

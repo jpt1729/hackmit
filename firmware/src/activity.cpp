@@ -86,6 +86,9 @@ void activityTick() {
   }
 }
 
+bool activityImuOk() { return imuOk; }
+float activityMotion() { return ema; }
+
 bool activityAckConsume() {
   if (!ackFlag) return false;
   ackFlag = false;

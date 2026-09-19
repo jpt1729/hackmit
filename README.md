@@ -9,20 +9,26 @@ ESP32 wearable for people with dementia/TBI. Gentle haptic prompts tied to time 
 ```mermaid
 flowchart LR
     subgraph Wearable [ESP32 Wearable]
-        ACC[Accelerometer<br/>I2C] --> ACT[activity module]
+        ACC[MPU-6050<br/>I2C] --> ACT[activity module]
         ACC --> ACK[shake-ack detect]
-        ELEC[Electrode pad<br/>ADC] --> WEAR[wear module]
+        ACT --> WEAR[wear module<br/>micro-motion]
+        GPSM[GT-U7 GPS<br/>UART] --> GPS[gps module<br/>geofence + clock]
         WIFI[WiFi scan] --> LOC[location module<br/>RSSI fingerprint]
         ACT --> PE[prompt engine]
         LOC --> PE
         WEAR --> PE
+        GPS --> PE
         CLK[NTP time] --> PE
-        PE --> VIBE[haptics module<br/>vibe motor]
+        GPS --> SAF[safety module]
+        ACT --> SAF
+        PE --> OUT[buzzer / LED ring / OLED]
+        SAF --> OUT
         ACK --> LOG[event log]
         PE --> LOG
         WEAR --> LOG
         ACT --> LOG
         LOC --> LOG
+        GPS --> LOG
         LOG --> API[HTTP server<br/>GET /state, /events]
     end
     API -- "JSON over LAN,<br/>polled every 3s" --> DASH[Caregiver dashboard<br/>static JS]
@@ -57,16 +63,20 @@ routine-anchor/
 │   ├── data/demo.json         # captured event log for replay mode
 │   └── img/                   # wiring diagram, photos (shared with README)
 ├── firmware/
-│   ├── platformio.ini         # (or routine_anchor.ino if Arduino IDE)
+│   ├── platformio.ini
 │   └── src/
 │       ├── main.cpp           # setup + single tick loop
-│       ├── config.h           # WiFi creds, pins, schedule table, room fingerprints
-│       ├── state.h            # DeviceState struct + Event struct (the shared types)
+│       ├── config.h           # WiFi creds, pins, schedule, fingerprints, home location
+│       ├── state.h            # DeviceState (the shared types)
 │       ├── activity.{h,cpp}   # resting/moving/sleeping + wander flag + shake-ack
-│       ├── location.{h,cpp}   # RSSI fingerprinting (stubbable)
-│       ├── wear.{h,cpp}       # electrode contact detection
+│       ├── location.{h,cpp}   # RSSI room fingerprinting (stubbable)
+│       ├── gps.{h,cpp}        # NMEA parse, geofence, clock fallback (stubbable)
+│       ├── wear.{h,cpp}       # on-body estimate from IMU micro-motion (stubbable)
 │       ├── prompts.{h,cpp}    # scheduler + gating logic
-│       ├── haptics.{h,cpp}    # vibe motor patterns
+│       ├── safety.{h,cpp}     # away/wander -> chime, ring, screen
+│       ├── buzzer.{h,cpp}     # piezo tone patterns
+│       ├── leds.{h,cpp}       # NeoPixel ring status modes
+│       ├── display.{h,cpp}    # OLED
 │       ├── events.{h,cpp}     # ring-buffer event log
 │       └── server.{h,cpp}     # HTTP endpoints + CORS
 ├── hardware/
@@ -94,10 +104,16 @@ enum Room { UNKNOWN, KITCHEN, BEDROOM, LIVING };  // match config table
 struct DeviceState {
   Activity activity;
   Room room;
-  bool worn;
+  uint8_t roomConfidence;   // 0–100, for the demo slide
+  bool worn;                // inferred from IMU micro-motion, not an electrode
   bool wanderFlag;          // motion 00:00–05:00
-  int8_t rssiConfidence;    // 0–100, for the demo slide
-  uint32_t pendingPromptId; // 0 = none
+  int8_t pendingPrompt;     // index into SCHEDULE, -1 = none
+
+  bool fix;                 // GPS
+  uint8_t sats;
+  double lat, lon;
+  float distanceHomeM;      // < 0 = unknown
+  bool awayFromHome;        // outside the geofence, debounced
 };
 
 struct Event {
@@ -122,21 +138,41 @@ struct Event {
 - **Stub**: `getRoom()` returns `UNKNOWN`; prompt engine's location gate auto-passes when room is `UNKNOWN`. This makes the fallback (time-only prompts) a config behavior, not a code rewrite.
 - Accuracy caveat for slides: this is room-*guess*, not room-*truth*. Say "room-level estimate," show the confidence number, don't claim precision you haven't measured.
 
-### wear — electrode contact
-- Electrode pad on ADC pin, simple divider circuit. Worn skin contact → reading in a band; open circuit → rail.
-- 5 s debounce both directions. Emit `wear_on` / `wear_off` events.
-- Do **not** derive heart rate or "stress" from this for v1. If you capture a pulse-looking signal, slide language is "elevated heart rate," never "detects agitation" — one pad + hackathon noise won't support the stronger claim.
+### gps — position, geofence, and the clock
+- GT-U7 on UART2 at 9600 baud. Hand-rolled NMEA parser (no library): `GGA` for fix/sats/position, `RMC` for UTC date + time. Checksums are verified; a bad sentence is dropped, not guessed at.
+- **Geofence**: haversine distance from `HOME_LAT`/`HOME_LON`. Leaving takes the full `GEOFENCE_RADIUS_M`, returning takes `RADIUS − HYST`, and either way 3 consecutive fixes must agree — GPS jitter at the boundary is the failure mode, not the fence. Emits `geofence_exit` / `geofence_return` with the distance in the detail field.
+- **Clock fallback**: if NTP is blocked at the venue (it often is), the first valid `RMC` sets the RTC. This removes the demo's single worst dependency; `POST /time` stays as a third fallback.
+- Fixes go stale after 15 s of silence: `fix` drops to false rather than the dashboard showing a position from ten minutes ago.
+- No fix (indoors, cold start) is a normal state: no geofence, everything else runs.
+
+### wear — is it actually on the wrist *(stubbable)*
+- No electrode in this BOM. Wear is inferred from the IMU: a strapped-on device always shows micro-motion (breathing, pulse, drift); a device on a nightstand is dead still.
+- Above `WEAR_MICRO_G` for 3 s → worn. Dead still for 5 min → not worn. Emits `wear_on` / `wear_off`.
+- No IMU answer → fail open (`worn = true`), so a dead sensor never mutes the day's prompts.
+- Slide language: "not detected on body", never "removed". `test_imu_noise_floor_is_below_the_wear_threshold` on the device checks this board's noise floor actually sits under the threshold.
 
 ### prompts — the product
 - Schedule table in `config.h`: `{hour, minute, label, requiredRoom (or ANY), gate}`.
-- Gate logic per tick: time reached AND `worn` AND `activity != SLEEPING` AND (room matches OR requiredRoom == ANY OR room == UNKNOWN-with-stub).
-- Fire → `haptics.pulse(GENTLE)`, set `pendingPromptId`, emit `prompt_fired`, start 60 s ack window.
-- Shake within window → `prompt_acked`. Timeout → re-buzz once, then `prompt_missed` (dashboard alert). Snooze-if-not-worn: hold prompt until wear resumes, up to 30 min.
-- Manual trigger endpoint `POST /demo/fire` (see server) so the live demo doesn't depend on the wall clock.
+- Gate logic per tick: time reached AND `worn` AND `activity != SLEEPING` AND **not** `awayFromHome` AND (room matches OR requiredRoom == ANY OR room == UNKNOWN-with-stub).
+- Fire → `buzzerGentle()`, ring turns amber, label goes on the OLED, set `pendingPrompt`, emit `prompt_fired`, start 60 s ack window.
+- Shake within window → `prompt_acked` (ring flashes green, OLED says "Done!"). Timeout → re-chime once, then `prompt_missed` (dashboard alert). Hold-if-not-worn / away: hold the prompt until they are back and wearing it, up to 30 min.
+- `POST /demo/fire` forces a prompt (demo insurance); `POST /ack` lets the caregiver tick one off from the dashboard.
 
-### haptics
-- Vibe motor on GPIO via NPN transistor + flyback diode (motor is inductive — don't drive it bare off the pin).
-- Patterns: `GENTLE` (2 × 400 ms), `REMIND` (3 × 200 ms). PWM at ~60% duty so it's a nudge, not an alarm — the "gentle" in the pitch is a firmware constant.
+### buzzer — piezo
+- Passive piezo on `PIN_BUZZER`, driven with LEDC tones; patterns are `{frequency, ms}` note lists played by a non-blocking sequencer.
+- `GENTLE` (two rising notes), `REMIND` (three notes, louder), `ALERT` (two-tone, away from home), `ACK` (short blip). Duty is volume: all patterns sit under 25% of a square wave's maximum, so it is a chime, not an alarm — the "gentle" in the pitch is a firmware constant.
+- `BUZZER_PASSIVE 0` switches to an active buzzer (on/off only); the patterns then play as rhythm.
+
+### leds — NeoPixel ring
+- One mode chosen per frame from `DeviceState`, in priority order: temporary flash > boot > alert (away or wandering) > prompt pending > acknowledged > off-body > asleep > idle.
+- Boot chase while WiFi comes up, amber comet for a waiting prompt, red pulse for an alert, green wash on ack, a dim warm glow as a night light while asleep.
+- Brightness is capped at `LED_BRIGHTNESS 40`: it is worn at night, and 12 pixels at full white draw more current than USB provides.
+
+### safety — the alert responder
+- Sensors stay sensors: nothing in `gps.cpp` or `activity.cpp` knows the buzzer exists. `safety.cpp` watches `awayFromHome` and `wanderFlag` and produces the on-wrist response.
+- Leaving home: chime + red ring + OLED showing distance and compass direction home ("Home 210m SW"), repeated every 2 min, at most 5 times — then it stops nagging, because the caregiver already has the alert.
+- Night wandering: one quiet nudge on a 5 min cooldown. Waking someone fully at 3am is worse than the wander.
+- `POST /silence` stops the chime without clearing the alert.
 
 ### events
 - Ring buffer, 200 entries, monotonic `id`. `since=<id>` query support. RAM-only is fine for a demo; note "no persistence across reboot" in README.
@@ -146,8 +182,11 @@ struct Event {
   - `GET /state` → current `DeviceState` as JSON
   - `GET /events?since=<id>` → array of events after id
   - `POST /demo/fire?id=<n>` → force a scheduled prompt now (demo insurance)
+  - `POST /ack` → acknowledge the pending prompt from the dashboard (409 if none)
+  - `POST /silence` → stop the away-from-home chime, keep the alert
+  - `POST /time?epoch=<n>` → set the clock
 - CORS header `Access-Control-Allow-Origin: *` on everything — the dashboard is served from a different origin in both modes.
-- Time via NTP at boot (WiFi is required anyway for RSSI). Fallback if venue blocks NTP: `POST /time` from the dashboard on connect.
+- Clock, in order of preference: NTP at boot → GPS `RMC` → `POST /time` from the dashboard.
 
 ---
 
@@ -179,7 +218,16 @@ Schedule duplication note: the schedule lives in `config.h` (firmware truth) and
   "roomConfidence": 82,
   "worn": true,
   "wanderFlag": false,
-  "pendingPrompt": null
+  "awayFromHome": false,
+  "pendingPrompt": null,
+  "gps": {
+    "fix": true,
+    "sats": 9,
+    "lat": 42.360100,
+    "lon": -71.094200,
+    "distanceHomeM": 12,
+    "heading": "NW"
+  }
 }
 ```
 
@@ -189,11 +237,14 @@ Schedule duplication note: the schedule lives in `config.h` (firmware truth) and
   { "id": 42, "ts": 1758290400, "type": "prompt_fired",  "detail": "meds_9am" },
   { "id": 43, "ts": 1758290421, "type": "prompt_acked",  "detail": "meds_9am" },
   { "id": 44, "ts": 1758291000, "type": "wear_off",      "detail": "" },
-  { "id": 45, "ts": 1758291300, "type": "room_change",   "detail": "bedroom" }
+  { "id": 45, "ts": 1758291300, "type": "room_change",   "detail": "bedroom" },
+  { "id": 46, "ts": 1758291600, "type": "geofence_exit",  "detail": "210m" }
 ]}
 ```
 
-Event vocabulary (complete, do not grow it mid-hack): `prompt_fired`, `prompt_acked`, `prompt_missed`, `wear_on`, `wear_off`, `room_change`, `wander`.
+Event vocabulary (complete, do not grow it mid-hack): `prompt_fired`, `prompt_acked`, `prompt_missed`, `wear_on`, `wear_off`, `room_change`, `wander`, `geofence_exit`, `geofence_return`.
+
+When there is no fix, `gps.fix` is `false` and `lat`/`lon`/`distanceHomeM` are `null` — never a stale position. `awayFromHome` holds its last known value, because losing GPS is not the same as coming home.
 
 `docs/data/demo.json` is exactly an `/events` array plus an initial state — so `tools/capture_demo.py` can record a real session and replay mode needs zero special-casing.
 
@@ -215,8 +266,9 @@ Event vocabulary (complete, do not grow it mid-hack): `prompt_fired`, `prompt_ac
 
 | Moment | Path through the system |
 |---|---|
-| Prompt fires, device buzzes, shake, checkbox ticks | prompts → haptics → activity(ack) → events → server → api.js → checklist.js |
-| Peel device off, alert appears | wear → events → server → api.js → alerts.js |
+| Prompt fires: chime, ring goes amber, label on the OLED; shake; checkbox ticks | prompts → buzzer/leds/display → activity(ack) → events → server → api.js → checklist.js |
+| Put the device down; "not on body" appears | activity → wear → events → server → api.js → alerts.js |
+| Walk out of the geofence: alert chime, ring red, OLED shows the way home | gps → safety → buzzer/leds/display → events → server → api.js → alerts.js |
 | Walk between two rooms, location updates | location → events → server → api.js → timeline.js |
 
 Rehearse with `POST /demo/fire` so moment 1 never waits on the clock. If venue WiFi dies mid-pitch, the Pages replay of your dry run is the parachute — mention it exists, don't lead with it.
@@ -225,13 +277,14 @@ Rehearse with `POST /demo/fire` so moment 1 never waits on the clock. If venue W
 
 ## 8. Cut order → code impact
 
-| Cut | What changes | What survives |
-|---|---|---|
-| 1. Electrode / wear | `wear.cpp` stub returns `worn=true`; dashboard hides wear UI | Everything else untouched |
-| 2. RSSI localization | `location.cpp` stub returns `UNKNOWN`; gate auto-passes; prompts become time-only | Full prompt→ack→dashboard loop |
-| Never | — | prompts + haptics + events + server + api.js + checklist.js |
+| Cut | Build flag | What changes | What survives |
+|---|---|---|---|
+| 1. Wear estimate | `-DENABLE_WEAR=0` | `wear.cpp` holds `worn=true`; dashboard hides wear UI | Everything else untouched |
+| 2. RSSI localization | `-DENABLE_LOCATION=0` | room stays `UNKNOWN`; gate auto-passes; prompts become time-only | Full prompt→ack→dashboard loop |
+| 3. GPS / geofence | `-DENABLE_GPS=0` | no geofence, no away alert; clock needs NTP or `POST /time` | Full prompt→ack→dashboard loop |
+| Never | — | — | prompts + buzzer + events + server + api.js + checklist.js |
 
-The stubs are why modules exist as separate files: cutting is a one-line change, not surgery.
+Each cut is a compile flag with its own build env (`esp32dev_nowear`, `esp32dev_noloc`, `esp32dev_min`), so `pio run` proves the cut still compiles before you need it. The ring and the OLED come out the same way (`ENABLE_LEDS`, `ENABLE_DISPLAY`), which is also how the native tests run without their libraries.
 
 ## 9. Time budget → modules
 

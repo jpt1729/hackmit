@@ -19,8 +19,12 @@ ROOT = Path(__file__).resolve().parent.parent
 ACTIVITIES = {"sleeping", "resting", "moving"}
 ROOMS = {"unknown", "kitchen", "bedroom", "living"}
 EVENT_TYPES = {"prompt_fired", "prompt_acked", "prompt_missed",
-               "wear_on", "wear_off", "room_change", "wander"}
-STATE_KEYS = {"ts", "activity", "room", "roomConfidence", "worn", "wanderFlag", "pendingPrompt"}
+               "wear_on", "wear_off", "room_change", "wander",
+               "geofence_exit", "geofence_return"}
+STATE_KEYS = {"ts", "activity", "room", "roomConfidence", "worn", "wanderFlag",
+              "awayFromHome", "pendingPrompt", "gps"}
+GPS_KEYS = {"fix", "sats", "lat", "lon", "distanceHomeM", "heading"}
+COMPASS = {"", "N", "NE", "E", "SE", "S", "SW", "W", "NW"}
 
 
 def _is_int(v):
@@ -45,14 +49,44 @@ def validate_state(s, schedule_ids=None):
         errs.append(f"room={s['room']!r} not in {sorted(ROOMS)}")
     if "roomConfidence" in s and not (_is_int(s["roomConfidence"]) and 0 <= s["roomConfidence"] <= 100):
         errs.append(f"roomConfidence={s['roomConfidence']!r} not an int 0-100")
-    for k in ("worn", "wanderFlag"):
+    for k in ("worn", "wanderFlag", "awayFromHome"):
         if k in s and not isinstance(s[k], bool):
             errs.append(f"{k}={s[k]!r} not a bool")
+    errs += validate_gps(s.get("gps"))
     p = s.get("pendingPrompt")
     if p is not None and not isinstance(p, str):
         errs.append(f"pendingPrompt={p!r} not null or string")
     if isinstance(p, str) and schedule_ids and p not in schedule_ids:
         errs.append(f"pendingPrompt={p!r} not a schedule id {sorted(schedule_ids)}")
+    return errs
+
+
+def validate_gps(g):
+    """Return a list of problems with the gps sub-object of /state."""
+    if g is None:
+        return ["state has no gps object"]
+    if not isinstance(g, dict):
+        return [f"gps is {type(g).__name__}, expected object"]
+    errs = []
+    missing, extra = GPS_KEYS - g.keys(), g.keys() - GPS_KEYS
+    if missing:
+        errs.append(f"gps missing keys {sorted(missing)}")
+    if extra:
+        errs.append(f"gps has unexpected keys {sorted(extra)}")
+    if "fix" in g and not isinstance(g["fix"], bool):
+        errs.append(f"gps.fix={g['fix']!r} not a bool")
+    if "sats" in g and not (_is_int(g["sats"]) and 0 <= g["sats"] <= 64):
+        errs.append(f"gps.sats={g['sats']!r} not an int 0-64")
+    if g.get("heading") not in COMPASS:
+        errs.append(f"gps.heading={g.get('heading')!r} not a compass point")
+    # Without a fix the position fields must be null, never a stale position.
+    for k, lo, hi in (("lat", -90, 90), ("lon", -180, 180), ("distanceHomeM", 0, 40_000_000)):
+        v = g.get(k)
+        if not g.get("fix"):
+            if v is not None:
+                errs.append(f"gps.{k}={v!r} should be null without a fix")
+        elif not isinstance(v, (int, float)) or isinstance(v, bool) or not lo <= v <= hi:
+            errs.append(f"gps.{k}={v!r} not a number in [{lo}, {hi}]")
     return errs
 
 

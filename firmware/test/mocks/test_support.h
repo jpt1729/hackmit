@@ -20,9 +20,15 @@ inline void resetMocks() {
   tzset();
   mock::nowMs = 1000;               // not 0: firmware uses 0 as a "never" sentinel
   mock::epoch = 0;
+  mock::carryMs = 0;
   memset(mock::adc, 0, sizeof(mock::adc));
   memset(mock::pwm, 0, sizeof(mock::pwm));
+  memset(mock::pinLevel, 0, sizeof(mock::pinLevel));
   mock::pwmWrites = 0;
+  mock::toneFreq = 0;
+  mock::toneDuty = 0;
+  mock::toneWrites = 0;
+  mock::serial2Rx.clear();
   mock::imuPresent = true;
   mock::accelX = 0; mock::accelY = 0; mock::accelZ = 1.0f;
   mock::scanResults.clear();

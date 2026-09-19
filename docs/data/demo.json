@@ -6,12 +6,23 @@
     "roomConfidence": 82,
     "worn": true,
     "wanderFlag": false,
-    "pendingPrompt": null
+    "awayFromHome": false,
+    "pendingPrompt": null,
+    "gps": {
+      "fix": true,
+      "sats": 9,
+      "lat": 42.360100,
+      "lon": -71.094200,
+      "distanceHomeM": 8,
+      "heading": "NW"
+    }
   },
   "events": [
     { "id": 42, "ts": 1758290400, "type": "prompt_fired", "detail": "meds_9am" },
     { "id": 43, "ts": 1758290421, "type": "prompt_acked", "detail": "meds_9am" },
     { "id": 44, "ts": 1758291000, "type": "wear_off", "detail": "" },
-    { "id": 45, "ts": 1758291300, "type": "room_change", "detail": "bedroom" }
+    { "id": 45, "ts": 1758291300, "type": "room_change", "detail": "bedroom" },
+    { "id": 46, "ts": 1758291900, "type": "geofence_exit", "detail": "210m" },
+    { "id": 47, "ts": 1758292500, "type": "geofence_return", "detail": "14m" }
   ]
 }

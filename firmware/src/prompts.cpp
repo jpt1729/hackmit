@@ -2,7 +2,8 @@
 #include "config.h"
 #include "events.h"
 #include "activity.h"
-#include "haptics.h"
+#include "buzzer.h"
+#include "leds.h"
 #include "display.h"
 #include <string.h>
 
@@ -14,6 +15,7 @@ static uint32_t lastCheckMs = 0;
 
 static bool gatesPass(const PromptDef& p) {
   if (!g_state.worn || g_state.activity == SLEEPING) return false;
+  if (g_state.awayFromHome) return false;   // out of the house: routine can wait
   return p.room == ANY_ROOM || g_state.room == ROOM_UNKNOWN || g_state.room == p.room;
 }
 
@@ -22,7 +24,7 @@ static void fire(int idx) {
   g_state.pendingPrompt = idx;
   firedAtMs = millis();
   rebuzzed = false;
-  hapticsGentle();
+  buzzerGentle();
   addEvent("prompt_fired", SCHEDULE[idx].id);
 }
 
@@ -52,6 +54,16 @@ void promptsDemoFire(int idx) {
   fire(idx);
 }
 
+bool promptsAckPending() {
+  int p = g_state.pendingPrompt;
+  if (p < 0) return false;
+  resolve(p, "prompt_acked");
+  buzzerAck();
+  ledsFlash(LED_ACK, LED_ACK_FLASH_MS);
+  displayFlash("Done!", 5000);
+  return true;
+}
+
 void promptsTick() {
   uint32_t now = millis();
 
@@ -59,13 +71,13 @@ void promptsTick() {
   if (p >= 0) {
     uint32_t elapsed = now - firedAtMs;
     if (activityAckConsume()) {
-      resolve(p, "prompt_acked");
-      displayFlash("Done!", 5000);
+      promptsAckPending();
     } else if (elapsed >= ACK_WINDOW_MS) {
       resolve(p, "prompt_missed");
+      buzzerStop();
     } else if (!rebuzzed && elapsed >= REBUZZ_AT_MS) {
       rebuzzed = true;
-      hapticsRemind();
+      buzzerRemind();
     }
   }
 

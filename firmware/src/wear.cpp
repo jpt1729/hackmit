@@ -1,34 +1,50 @@
 #include "wear.h"
 #include "config.h"
 #include "events.h"
+#include "activity.h"
 
 #if ENABLE_WEAR
 
-static bool     candidate = true;
-static uint32_t candidateSinceMs = 0;
-static uint32_t lastReadMs = 0;
+// There is no electrode in this build. Wear is inferred from the IMU instead:
+// a device strapped to a person is never perfectly still (breathing, pulse,
+// small drifts), a device on a nightstand is. This is an estimate, not contact
+// sensing - the dashboard says "not detected on body", never "removed".
+static uint32_t lastSampleMs = 0;
+static uint32_t lastMotionMs = 0;
+static uint32_t motionStartMs = 0;
 
 void wearInit() {
-  candidate = true;
-  candidateSinceMs = millis();
-  lastReadMs = 0;
-  pinMode(PIN_ELECTRODE, INPUT);
+  lastSampleMs = 0;
+  lastMotionMs = millis();
+  motionStartMs = 0;
+  g_state.worn = true;            // assume it is on until stillness says otherwise
 }
 
 void wearTick() {
   uint32_t now = millis();
-  if (now - lastReadMs < 200) return;
-  lastReadMs = now;
+  if (now - lastSampleMs < WEAR_SAMPLE_MS) return;
+  lastSampleMs = now;
 
-  int v = analogRead(PIN_ELECTRODE);
-  bool contact = v > WEAR_ADC_MIN && v < WEAR_ADC_MAX;
-  if (contact != candidate) {
-    candidate = contact;
-    candidateSinceMs = now;
+  // No IMU means no opinion: fail open so prompts still fire.
+  if (!activityImuOk()) {
+    lastMotionMs = now;
+    g_state.worn = true;
+    return;
   }
-  if (candidate != g_state.worn && now - candidateSinceMs >= WEAR_DEBOUNCE_MS) {
-    g_state.worn = candidate;
-    addEvent(candidate ? "wear_on" : "wear_off", "");
+
+  if (activityMotion() > WEAR_MICRO_G) {
+    if (!motionStartMs) motionStartMs = now;
+    lastMotionMs = now;
+  } else {
+    motionStartMs = 0;
+  }
+
+  if (!g_state.worn && motionStartMs && now - motionStartMs >= WEAR_ON_DEBOUNCE_MS) {
+    g_state.worn = true;
+    addEvent("wear_on", "");
+  } else if (g_state.worn && now - lastMotionMs >= WEAR_OFF_STILL_MS) {
+    g_state.worn = false;
+    addEvent("wear_off", "");
   }
 }
 

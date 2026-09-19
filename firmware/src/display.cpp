@@ -1,5 +1,6 @@
 #include "display.h"
 #include "config.h"
+#include "gps.h"
 
 #if ENABLE_DISPLAY
 
@@ -12,7 +13,8 @@ static bool        ok = false;
 static const char* flashText = nullptr;
 static uint32_t    flashUntilMs = 0;
 static uint32_t    lastCheckMs = 0;
-static char        shownKey[64] = "";
+static char        footer[24] = "";
+static char        shownKey[96] = "";
 
 static void printWrapped(const char* text, size_t cols) {
   char buf[64];
@@ -38,10 +40,26 @@ static void drawCentered(const char* text, uint8_t size, int16_t y) {
   oled.print(text);
 }
 
+// The one-line summary under the clock: where they are, or why we are unsure.
+static void statusLine(char* out, size_t n) {
+  if (!g_state.worn) {
+    strlcpy(out, "not on wrist", n);
+  } else if (g_state.awayFromHome && g_state.distanceHomeM >= 0) {
+    snprintf(out, n, "home %dm %s", (int)g_state.distanceHomeM, gpsHomeHeading());
+  } else if (g_state.room != ROOM_UNKNOWN) {
+    strlcpy(out, roomName(g_state.room), n);
+  } else if (ENABLE_GPS && !gpsFixValid()) {
+    snprintf(out, n, "gps %u sats", g_state.sats);
+  } else {
+    strlcpy(out, "at home", n);
+  }
+}
+
 void displayInit() {
   flashText = nullptr;
   lastCheckMs = 0;
   shownKey[0] = 0;
+  footer[0] = 0;
 
   Wire.begin(PIN_SDA, PIN_SCL);
   ok = oled.begin(SSD1306_SWITCHCAPVCC, OLED_ADDR, true, false);
@@ -60,6 +78,8 @@ void displayFlash(const char* text, uint32_t ms) {
   flashUntilMs = millis() + ms;
 }
 
+void displayFooter(const char* text) { strlcpy(footer, text ? text : "", sizeof(footer)); }
+
 void displayTick() {
   uint32_t now = millis();
   if (!ok || now - lastCheckMs < 250) return;
@@ -76,10 +96,12 @@ void displayTick() {
     strftime(clock, sizeof(clock), "%H:%M", &tmv);
     strftime(weekday, sizeof(weekday), "%A", &tmv);
   }
+  char status[24];
+  statusLine(status, sizeof(status));
 
   // Full redraws cost ~25 ms of I2C, so only redraw when the content changes.
-  char key[64];
-  snprintf(key, sizeof(key), "%d|%s|%s", p, flashing ? flashText : "", clock);
+  char key[96];
+  snprintf(key, sizeof(key), "%d|%s|%s|%s|%s", p, flashing ? flashText : "", clock, status, footer);
   if (strcmp(key, shownKey) == 0) return;
   strlcpy(shownKey, key, sizeof(shownKey));
 
@@ -90,10 +112,12 @@ void displayTick() {
     printWrapped(SCHEDULE[p].label, 10);
     drawCentered("Shake to confirm", 1, 56);
   } else if (flashing) {
-    drawCentered(flashText, 3, 20);
+    drawCentered(flashText, strlen(flashText) > 8 ? 2 : 3, 24);
   } else {
-    drawCentered(clock, 3, 8);
-    drawCentered(weekday, 2, 44);
+    drawCentered(clock, 3, 4);
+    drawCentered(weekday, 1, 32);
+    drawCentered(status, 1, 44);
+    if (footer[0]) drawCentered(footer, 1, 56);
   }
   oled.display();
 }
@@ -103,5 +127,6 @@ void displayTick() {
 void displayInit() {}
 void displayTick() {}
 void displayFlash(const char*, uint32_t) {}
+void displayFooter(const char*) {}
 
 #endif

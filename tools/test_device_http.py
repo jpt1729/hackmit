@@ -100,7 +100,7 @@ def check_events(base):
 
 def check_cors_preflight(base):
     errs = []
-    for path in ("/state", "/events", "/demo/fire", "/time"):
+    for path in ("/state", "/events", "/demo/fire", "/ack", "/silence", "/time"):
         status, headers, _, _ = request(base, "OPTIONS", path)
         if status not in (200, 204):
             errs.append(f"OPTIONS {path} -> {status}")
@@ -127,6 +127,10 @@ def check_errors(base):
     status, _, _, _ = request(base, "GET", "/demo/fire?id=lunch")
     if status == 200:
         errs.append("GET /demo/fire fired a prompt; should be POST-only")
+    # /ack with nothing pending is a conflict, not a success.
+    status, _, _, _ = request(base, "POST", "/ack")
+    if status not in (200, 409):
+        errs.append(f"POST /ack -> {status}, want 200 or 409")
     report("error responses (404/400, JSON bodies, GET can't fire)", errs)
 
 
