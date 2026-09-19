@@ -1,13 +1,6 @@
 #pragma once
+#include <Arduino.h>
 
-#include <stdint.h>
-
-#include "state.h"
-
-namespace routine_anchor {
-
-void events_init();
-void events_push(const Event& evt);
-uint32_t events_last_id();
-
-}  // namespace routine_anchor
+void     eventsInit();
+uint32_t addEvent(const char* type, const char* detail);
+String   eventsJsonSince(uint32_t sinceId);

@@ -1,17 +1,56 @@
 #include "events.h"
+#include <time.h>
+#include <string.h>
 
-namespace routine_anchor {
+#define EVENT_BUF 200
 
-void events_init() {
-  // Placeholder: initialize ring buffer.
+struct Event {
+  uint32_t id;
+  time_t   ts;
+  char     type[16];
+  char     detail[24];
+};
+
+static Event    buf[EVENT_BUF];
+static uint16_t count = 0;
+static uint16_t head = 0;
+static uint32_t nextId = 1;
+
+void eventsInit() {
+  count = 0;
+  head = 0;
+  nextId = 1;
 }
 
-void events_push(const Event& evt) {
-  (void)evt;
+uint32_t addEvent(const char* type, const char* detail) {
+  Event& e = buf[head];
+  e.id = nextId++;
+  e.ts = time(nullptr);
+  strlcpy(e.type, type, sizeof(e.type));
+  strlcpy(e.detail, detail ? detail : "", sizeof(e.detail));
+
+  head = (head + 1) % EVENT_BUF;
+  if (count < EVENT_BUF) count++;
+
+  Serial.printf("[event] #%lu %s %s\n", (unsigned long)e.id, e.type, e.detail);
+  return e.id;
 }
 
-uint32_t events_last_id() {
-  return 0;
+String eventsJsonSince(uint32_t sinceId) {
+  String out;
+  out.reserve(2048);
+  out = "{\"events\":[";
+  bool first = true;
+  uint16_t oldest = (head + EVENT_BUF - count) % EVENT_BUF;
+  for (uint16_t i = 0; i < count; i++) {
+    const Event& e = buf[(oldest + i) % EVENT_BUF];
+    if (e.id <= sinceId) continue;
+    char item[128];
+    snprintf(item, sizeof(item), "%s{\"id\":%lu,\"ts\":%lu,\"type\":\"%s\",\"detail\":\"%s\"}",
+             first ? "" : ",", (unsigned long)e.id, (unsigned long)e.ts, e.type, e.detail);
+    out += item;
+    first = false;
+  }
+  out += "]}";
+  return out;
 }
-
-}  // namespace routine_anchor
