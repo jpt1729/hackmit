@@ -1,0 +1,129 @@
+:root {
+  --bg: #f4f5f7;
+  --panel: #ffffff;
+  --ink: #1b2430;
+  --muted: #667085;
+  --accent: #3b82f6;
+  --ok: #16a34a;
+  --warn: #d97706;
+  --danger: #dc2626;
+  --border: #e5e7eb;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 1.5rem;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+
+.eyebrow {
+  margin: 0;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+
+h1, h2 {
+  margin: 0.2rem 0 0 0;
+}
+
+.shell {
+  display: grid;
+  gap: 1rem;
+  padding: 1.5rem;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+.mode-banner {
+  padding: 0.45rem 0.75rem;
+  border-radius: 999px;
+  background: #eef6ff;
+  color: #1d4ed8;
+  font-size: 0.82rem;
+  border: 1px solid #dbeafe;
+}
+
+.checklist-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.7rem 0.8rem;
+  margin-top: 0.6rem;
+}
+
+.checklist-item.done {
+  background: #ecfdf5;
+  border-color: #bbf7d0;
+}
+
+.checklist-item.missed {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.timeline-strip {
+  display: flex;
+  gap: 0.25rem;
+  margin-top: 0.75rem;
+  min-height: 64px;
+  align-items: stretch;
+}
+
+.timeline-segment {
+  flex: 1;
+  min-height: 64px;
+  border-radius: 8px;
+  background: #e5e7eb;
+  display: flex;
+  align-items: end;
+  justify-content: center;
+  color: var(--ink);
+  font-size: 0.72rem;
+  padding-bottom: 0.45rem;
+}
+
+.timeline-segment.sleep { background: #dbeafe; }
+.timeline-segment.rest { background: #dcfce7; }
+.timeline-segment.move { background: #fef3c7; }
+.timeline-segment.room { background: #ddd6fe; }
+
+.alert-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.75rem 0 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.alert-item {
+  border-left: 4px solid var(--warn);
+  background: #fff7ed;
+  padding: 0.6rem 0.8rem;
+  border-radius: 0 8px 8px 0;
+}
+
+.alert-item.warn { border-left-color: var(--warn); }
+.alert-item.danger { border-left-color: var(--danger); }
+.alert-item.ok { border-left-color: var(--ok); }

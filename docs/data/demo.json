@@ -1,0 +1,17 @@
+{
+  "state": {
+    "ts": 1758290400,
+    "activity": "moving",
+    "room": "kitchen",
+    "roomConfidence": 82,
+    "worn": true,
+    "wanderFlag": false,
+    "pendingPrompt": null
+  },
+  "events": [
+    { "id": 42, "ts": 1758290400, "type": "prompt_fired", "detail": "meds_9am" },
+    { "id": 43, "ts": 1758290421, "type": "prompt_acked", "detail": "meds_9am" },
+    { "id": 44, "ts": 1758291000, "type": "wear_off", "detail": "" },
+    { "id": 45, "ts": 1758291300, "type": "room_change", "detail": "bedroom" }
+  ]
+}
