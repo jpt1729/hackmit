@@ -18,6 +18,7 @@
 #include "location.h"
 #include "wear.h"
 #include "prompts.h"
+#include "display.h"
 
 // Unity's TEST_PRINTF can't do widths/floats portably; format ourselves.
 static char sayBuf[160];
@@ -86,6 +87,30 @@ void test_activity_resting_on_bench() {
   uint32_t start = millis();
   while (millis() - start < 3000) activityTick();
   TEST_ASSERT_EQUAL_STRING("resting", activityName(g_state.activity));
+}
+
+// ---------------------------------------------------------------- OLED
+
+void test_oled_responds() {
+  Wire.begin(PIN_SDA, PIN_SCL);
+  Wire.beginTransmission(OLED_ADDR);
+  TEST_ASSERT_EQUAL_MESSAGE(0, Wire.endTransmission(),
+      "No I2C reply at OLED_ADDR. Check wiring; some modules use 0x3D");
+}
+
+void test_oled_shows_messages() {
+  displayInit();
+  delay(1000);
+  displayFlash("TEST", 1500);
+  uint32_t t0 = millis();
+  while (millis() - t0 < 1500) displayTick();
+  g_state.pendingPrompt = 0;
+  t0 = millis();
+  while (millis() - t0 < 2000) displayTick();
+  g_state.pendingPrompt = -1;
+  displayTick();
+  TEST_MESSAGE("You should have seen: Starting, TEST, then the first prompt's label.");
+  TEST_PASS();
 }
 
 // ---------------------------------------------------------------- electrode
@@ -198,6 +223,7 @@ void test_main_loop_never_blocks() {
   wearInit();
   locationInit();
   promptsInit();
+  displayInit();
   uint32_t worst = 0, iterations = 0, t0 = millis();
   while (millis() - t0 < 30000) {
     uint32_t s = micros();
@@ -206,6 +232,7 @@ void test_main_loop_never_blocks() {
     locationTick();
     promptsTick();
     hapticsTick();
+    displayTick();
     uint32_t d = micros() - s;
     if (d > worst) worst = d;
     iterations++;
@@ -226,6 +253,8 @@ void setup() {
   RUN_TEST(test_mpu6050_whoami);
   RUN_TEST(test_accel_reads_1g_at_rest);
   RUN_TEST(test_activity_resting_on_bench);
+  RUN_TEST(test_oled_responds);
+  RUN_TEST(test_oled_shows_messages);
   RUN_TEST(test_electrode_adc_reads);
   RUN_TEST(test_vibe_motor);
   RUN_TEST(test_wifi_scan_sees_fingerprint_aps);

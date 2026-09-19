@@ -58,6 +58,23 @@ void test_schedule_ids_fit_event_detail() {
     TEST_ASSERT_LESS_THAN_MESSAGE(24, strlen(SCHEDULE[i].id), SCHEDULE[i].id);
 }
 
+// The OLED shows labels at text size 2: 10 chars per line, 3 lines above the footer.
+void test_labels_fit_on_oled() {
+  for (size_t i = 0; i < SCHEDULE_LEN; i++) {
+    char buf[64];
+    strlcpy(buf, SCHEDULE[i].label, sizeof(buf));
+    int lines = 1;
+    size_t used = 0;
+    for (char* w = strtok(buf, " "); w; w = strtok(nullptr, " ")) {
+      size_t len = strlen(w);
+      TEST_ASSERT_LESS_OR_EQUAL_MESSAGE(10, len, SCHEDULE[i].label);
+      if (used && used + 1 + len > 10) { lines++; used = len; }
+      else used += (used ? 1 : 0) + len;
+    }
+    TEST_ASSERT_LESS_OR_EQUAL_MESSAGE(3, lines, SCHEDULE[i].label);
+  }
+}
+
 // ---------- firing ----------
 
 void test_no_prompts_without_clock() {
@@ -242,6 +259,7 @@ int main() {
   UNITY_BEGIN();
   RUN_TEST(test_find_by_id);
   RUN_TEST(test_schedule_ids_fit_event_detail);
+  RUN_TEST(test_labels_fit_on_oled);
   RUN_TEST(test_no_prompts_without_clock);
   RUN_TEST(test_not_before_slot);
   RUN_TEST(test_fires_at_slot_and_buzzes);

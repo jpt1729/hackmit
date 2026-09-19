@@ -9,6 +9,7 @@
 #include "haptics.h"
 #include "prompts.h"
 #include "server.h"
+#include "display.h"
 
 DeviceState g_state;
 
@@ -34,6 +35,7 @@ void setup() {
   Serial.begin(115200);
   delay(200);
   Serial.println("\n[routine-anchor] boot");
+  displayInit();
 
   connectWiFi();
   configTime(TZ_OFFSET_SEC, 0, NTP_SERVER);
@@ -55,6 +57,7 @@ void loop() {
   locationTick();
   promptsTick();
   hapticsTick();
+  displayTick();
   serverTick();
   delay(1);
 }

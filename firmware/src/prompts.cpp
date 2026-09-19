@@ -3,6 +3,7 @@
 #include "events.h"
 #include "activity.h"
 #include "haptics.h"
+#include "display.h"
 #include <string.h>
 
 static bool     doneToday[SCHEDULE_LEN];
@@ -59,6 +60,7 @@ void promptsTick() {
     uint32_t elapsed = now - firedAtMs;
     if (activityAckConsume()) {
       resolve(p, "prompt_acked");
+      displayFlash("Done!", 5000);
     } else if (elapsed >= ACK_WINDOW_MS) {
       resolve(p, "prompt_missed");
     } else if (!rebuzzed && elapsed >= REBUZZ_AT_MS) {

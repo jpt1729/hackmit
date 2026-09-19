@@ -6,7 +6,7 @@ There are four layers. Run them from the top down. Each one needs more hardware 
 |---|---|---|---|
 | 1. Logic | `pio test -e native` | nothing (runs on laptop, ~5 s) | prompt gating, ack/rebuzz/miss, shake detection, wander, RSSI matching, wear debounce, event log + JSON |
 | 2. Builds | `pio run` (all envs) | nothing | ESP32 compile errors in the full build and in the cut builds (`ENABLE_WEAR=0`, `ENABLE_LOCATION=0`), plus RAM/flash use |
-| 3. Hardware | `pio test -e esp32dev` | ESP32 on USB, wired | IMU wiring + WHO_AM_I, 1 g at rest, electrode ADC, motor (you feel it), WiFi scan sees the fingerprint APs, WiFi join, NTP, loop never blocks >50 ms, heap headroom, no leak building `/events` |
+| 3. Hardware | `pio test -e esp32dev` | ESP32 on USB, wired | IMU wiring + WHO_AM_I, OLED responds + shows messages (you watch it), 1 g at rest, electrode ADC, motor (you feel it), WiFi scan sees the fingerprint APs, WiFi join, NTP, loop never blocks >50 ms, heap headroom, no leak building `/events` |
 | 4. Network | `python3 ../tools/test_device_http.py <ip> [--fire] [--set-time] [--soak 30]` | flashed device on the demo network | JSON contract, CORS, error codes, latency, prompt→shake→ack end to end, reboots or dropouts over a long soak |
 
 Plus one static check that needs no device:

@@ -12,10 +12,14 @@
 #ifndef ENABLE_LOCATION
 #define ENABLE_LOCATION 1
 #endif
+#ifndef ENABLE_DISPLAY
+#define ENABLE_DISPLAY 1
+#endif
 
 #define PIN_SDA       21
 #define PIN_SCL       22
 #define MPU_ADDR      0x68
+#define OLED_ADDR     0x3C
 #define PIN_VIBE      25
 #define VIBE_DUTY     153
 #define PIN_ELECTRODE 34   // must be ADC1 (GPIO 32-39): ADC2 doesn't work while WiFi is on
