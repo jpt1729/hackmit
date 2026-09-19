@@ -1,0 +1,18 @@
+{
+  "name": "Routine Anchor",
+  "short_name": "Routine Anchor",
+  "description": "Gentle daily reminders and a familiar routine, with Pip by your side.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#171922",
+  "theme_color": "#171922",
+  "icons": [
+    {
+      "src": "icons/app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

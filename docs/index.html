@@ -1,37 +1,103 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Routine Anchor</title>
+    <meta name="theme-color" content="#171922" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <link rel="manifest" href="manifest.json" />
+    <title>My day · Routine Anchor</title>
+    <script>
+      try {
+        document.documentElement.dataset.theme = localStorage.getItem("routine-anchor-theme") === "light" ? "light" : "dark";
+      } catch {}
+    </script>
     <link rel="stylesheet" href="css/style.css" />
   </head>
   <body>
+    <a class="skip-link" href="#main">Skip to my routine</a>
     <header class="topbar">
-      <div>
-        <p class="eyebrow">Routine Anchor</p>
-        <h1>Caregiver dashboard</h1>
+      <div class="topbar-inner">
+        <a class="brand" href="./" aria-label="Routine Anchor home">
+          <span class="brand-mark"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="7" r="3"/><path d="M16 10v17M10 15h12M5 20c0 5 5 8 11 8s11-3 11-8M5 20l-2 3m2-3 3 2m19-2 2 3m-2-3-3 2"/></svg></span>
+          <span>Routine Anchor</span>
+        </a>
+        <div class="display-controls" aria-label="Display settings">
+          <button id="text-size" class="button button-secondary" type="button" aria-pressed="false"><span class="text-icon" aria-hidden="true">Aa</span> Larger text</button>
+          <button id="theme-toggle" class="button button-secondary" type="button" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 15.5A8.5 8.5 0 0 1 8.5 4 8.5 8.5 0 1 0 20 15.5Z"/></svg> Dark mode</button>
+        </div>
       </div>
-      <div id="mode-banner" class="mode-banner" aria-live="polite"></div>
     </header>
 
-    <main class="shell">
-      <section class="panel">
-        <h2>Today</h2>
+    <main id="main" class="shell" tabindex="-1">
+      <div class="page-heading">
+        <div><p id="session-date" class="date-line"></p><h1>A little rhythm for your day.</h1><p class="intro">Your routine. One gentle reminder at a time.</p></div>
+        <span class="day-badge"><span aria-hidden="true">☀</span> My day</span>
+      </div>
+
+      <section class="mode-notice" aria-label="Connection and demo">
+        <span class="connection-dot" aria-hidden="true"></span>
+        <div><p id="mode-banner" class="notice-title" role="status">Loading your routine…</p><p id="mode-description" class="notice-description"></p></div>
+        <button id="replay-toggle" class="button button-small" type="button" hidden>Pause demo</button>
+      </section>
+
+      <div class="day-grid">
+        <section class="panel clock-panel" aria-labelledby="clock-title">
+          <div class="section-heading"><div><p class="section-label">A familiar rhythm</p><h2 id="clock-title">Your routine clock</h2></div><span class="small-badge">Morning</span></div>
+          <div id="routine-clock" class="routine-clock">
+            <svg id="clock-face" viewBox="0 0 400 400" aria-hidden="true"></svg>
+            <div class="clock-center"><span id="clock-time-label">Time</span><strong id="clock-time">—</strong><span id="clock-period"></span></div>
+            <div id="clock-events" role="group" aria-label="Select a morning reminder"></div>
+          </div>
+          <p id="clock-selection" class="clock-selection"></p>
+          <p class="clock-help">Tap a symbol to explore your routine.</p>
+          <div class="clock-legend"><span><i class="legend-dot" aria-hidden="true"></i> Scheduled</span><span><i class="legend-check" aria-hidden="true">✓</i> Received</span></div>
+        </section>
+
+        <section class="panel companion-panel" aria-labelledby="companion-title">
+          <div class="companion-heading"><span class="companion-dot" aria-hidden="true"></span><h2 id="companion-title">A little company</h2></div>
+          <div class="mascot-scene">
+            <svg id="brain-mascot" class="brain-mascot" viewBox="0 0 240 200" role="img" aria-label="Pip, a smiling pink brain with little arms and feet">
+              <ellipse class="mascot-shadow" cx="122" cy="184" rx="58" ry="7"/>
+              <g fill="none" stroke="#dbaeae" stroke-width="7" stroke-linecap="round"><path d="m85 153-7 26h-11m85-26 9 26h12"/><path d="M53 112c-15 3-22-3-26-13m153 10c14-1 22-10 25-19"/></g>
+              <path d="M120 35c-14-15-35-10-43 4-17-3-34 12-31 30-16 10-19 32-7 46-5 18 8 37 25 38 11 21 37 22 56 9 19 13 45 12 56-9 17-1 30-20 25-38 12-14 9-36-7-46 3-18-14-33-31-30-8-14-29-19-43-4Z" fill="#f0bfc6" stroke="#513e54" stroke-width="3.5"/>
+              <path d="M120 37v48m0 58v17M78 42c-8 12-1 24 11 27m-40 2c13-4 23 6 23 17m-30 26c8-10 20-10 28-3m-4 43c-5-13 1-23 12-26m84-86c8 12 1 24-11 27m40 2c-13-4-23 6-23 17m30 26c-8-10-20-10-28-3m4 43c5-13-1-23-12-26M92 81c-1-10 5-16 13-16m43 16c1-10-5-16-13-16" fill="none" stroke="#ca899d" stroke-width="4" stroke-linecap="round"/>
+              <ellipse cx="92" cy="112" rx="5" ry="7" fill="#3b3049"/><ellipse cx="148" cy="112" rx="5" ry="7" fill="#3b3049"/>
+              <circle cx="79" cy="125" r="8" fill="#e79cac" opacity=".75"/><circle cx="161" cy="125" r="8" fill="#e79cac" opacity=".75"/>
+              <path class="mascot-smile" d="M108 130q12 14 24 0" fill="none" stroke="#3b3049" stroke-width="4" stroke-linecap="round"/>
+              <path d="m201 85 2-7m6 12 6-2" stroke="#e6daa4" stroke-width="3" stroke-linecap="round"/>
+            </svg>
+            <div><p class="mascot-name">Hi, I’m Pip.</p><p class="mascot-intro">Let’s take today one step at a time.</p></div>
+          </div>
+          <div class="speech-bubble">
+            <p id="focus-label" class="section-label">Your routine companion</p>
+            <h3 id="focus-title">I’m here to help you follow your day.</h3>
+            <p id="focus-description">Choose an event on the clock or in your routine below.</p>
+            <p id="next-event" class="next-event"></p>
+          </div>
+          <button id="read-aloud" class="button button-primary" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m11 5-6 4H2v6h3l6 4V5Zm4 3c3 2 3 6 0 8m3-11c5 4 5 10 0 14"/></svg><span>Read aloud</span></button>
+          <p id="speech-status" class="speech-status" role="status"></p>
+        </section>
+      </div>
+
+      <section class="panel routine-panel" aria-labelledby="routine-title">
+        <div class="section-heading"><div><p class="section-label">One step at a time</p><h2 id="routine-title">Your morning routine</h2></div><span class="small-badge">3 reminders</span></div>
         <div id="checklist"></div>
+        <p class="routine-note">“Received” means your wristband registered a shake, not that the activity is complete.</p>
       </section>
 
-      <section class="panel">
-        <h2>Timeline</h2>
-        <div id="timeline"></div>
-      </section>
-
-      <section class="panel">
-        <h2>Alerts</h2>
-        <div id="alerts"></div>
-      </section>
+      <details class="caregiver-panel">
+        <summary><span><span class="summary-title">For caregivers</span><span class="summary-description">Device status, notices, and recent activity</span></span></summary>
+        <div class="caregiver-content">
+          <section aria-labelledby="alerts-title"><h2 id="alerts-title">Notices for your caregiver</h2><div id="alerts"></div></section>
+          <section aria-labelledby="timeline-title"><h2 id="timeline-title">Device and recent activity</h2><div id="timeline"></div></section>
+        </div>
+      </details>
+      <p class="footer-note"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 6v6c0 4 8 9 8 9s8-5 8-9V6l-8-3Z"/><path d="m8 12 3 3 5-6"/></svg> A little support. Right here with you.</p>
+      <p id="routine-announcement" class="sr-only" role="status" aria-atomic="true"></p>
+      <noscript><p class="mode-notice">JavaScript is needed to show reminders. Please ask your caregiver to help turn it on.</p></noscript>
     </main>
-
     <script type="module" src="js/app.js"></script>
   </body>
 </html>
