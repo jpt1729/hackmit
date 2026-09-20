@@ -176,7 +176,8 @@ def check_scan(base):
 
 def check_cors_preflight(base):
     errs = []
-    for path in ("/state", "/events", "/schedule", "/scan", "/demo/fire", "/ack", "/silence", "/time"):
+    for path in ("/state", "/events", "/schedule", "/scan", "/demo/fire", "/ack", "/silence",
+                 "/time", "/fall/cancel", "/message", "/message/dismiss"):
         status, headers, _, _ = request(base, "OPTIONS", path)
         if status not in (200, 204):
             errs.append(f"OPTIONS {path} -> {status}")
@@ -193,7 +194,7 @@ def check_errors(base):
         errs.append(f"GET /nope -> {status}, want 404")
     errs += cors_errs(headers)
     for path, want in (("/demo/fire", 400), ("/demo/fire?id=not_a_prompt", 404),
-                       ("/time", 400), ("/schedule", 400)):
+                       ("/time", 400), ("/schedule", 400), ("/message", 400)):
         status, _, body, _ = request(base, "POST", path)
         if status != want:
             errs.append(f"POST {path} -> {status}, want {want}")
@@ -208,7 +209,32 @@ def check_errors(base):
     status, _, _, _ = request(base, "POST", "/ack")
     if status not in (200, 409):
         errs.append(f"POST /ack -> {status}, want 200 or 409")
+    # Same for clearing a fall when nobody has fallen. This must never be a
+    # 200: a dashboard that thinks it cleared a fall it did not is dangerous.
+    status, _, _, _ = request(base, "POST", "/fall/cancel")
+    if status not in (200, 409):
+        errs.append(f"POST /fall/cancel -> {status}, want 200 or 409")
     report("error responses (404/400, JSON bodies, GET can't fire)", errs)
+
+
+def check_message(base):
+    """POST a note to the OLED, then confirm the device says it is waiting."""
+    errs = []
+    status, _, body, _ = request(base, "POST", "/message?text=contract+test")
+    if status != 200:
+        errs.append(f"POST /message -> {status}, want 200")
+    else:
+        state = get_json(base, "/state")
+        if state.get("messageWaiting") is not True:
+            errs.append(f"after POST /message, messageWaiting={state.get('messageWaiting')!r}, want True")
+        status, _, _, _ = request(base, "POST", "/message/dismiss")
+        if status != 200:
+            errs.append(f"POST /message/dismiss -> {status}, want 200")
+        else:
+            state = get_json(base, "/state")
+            if state.get("messageWaiting") is not False:
+                errs.append(f"after dismiss, messageWaiting={state.get('messageWaiting')!r}, want False")
+    report("OLED message round-trip (POST /message -> state -> dismiss)", errs)
 
 
 def check_latency(base, n=20):
@@ -327,6 +353,7 @@ def main():
     check_scan(base)
     check_cors_preflight(base)
     check_errors(base)
+    check_message(base)
     check_latency(base)
     if a.fire:
         last = check_fire(base, a.fire, last)

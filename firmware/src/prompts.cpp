@@ -9,10 +9,23 @@
 #include <string.h>
 
 static bool     doneToday[SCHEDULE_MAX];
+static bool     ackedToday[SCHEDULE_MAX];
 static int      lastDay = -1;
 static uint32_t firedAtMs = 0;
 static bool     rebuzzed = false;
 static uint32_t lastCheckMs = 0;
+
+// The ring counts what the wearer actually did, so a missed prompt closes the
+// slot without lighting a pixel. The total follows the live schedule, so a
+// routine pushed from the dashboard resizes the ring with it.
+static void recount() {
+  uint8_t total = scheduleCount();
+  uint8_t done = 0;
+  for (uint8_t i = 0; i < total; i++)
+    if (ackedToday[i]) done++;
+  g_state.tasksDone = done;
+  g_state.tasksTotal = total;
+}
 
 static bool gatesPass(const Prompt& p) {
   if (!g_state.worn || g_state.activity == SLEEPING) return false;
@@ -32,15 +45,19 @@ static void fire(int idx) {
 static void resolve(int idx, const char* type) {
   addEvent(type, scheduleAt(idx).id);
   doneToday[idx] = true;
+  if (strcmp(type, "prompt_acked") == 0) ackedToday[idx] = true;
   g_state.pendingPrompt = -1;
+  recount();
 }
 
 void promptsInit() {
   memset(doneToday, 0, sizeof(doneToday));
+  memset(ackedToday, 0, sizeof(ackedToday));
   lastDay = -1;
   rebuzzed = false;
   lastCheckMs = 0;
   g_state.pendingPrompt = -1;
+  recount();
 }
 
 int promptsFindById(const char* id) { return scheduleFindById(id); }
@@ -49,9 +66,11 @@ int promptsFindById(const char* id) { return scheduleFindById(id); }
 // old table - the pending prompt, today's done flags - has to let go.
 void promptsScheduleChanged() {
   memset(doneToday, 0, sizeof(doneToday));
+  memset(ackedToday, 0, sizeof(ackedToday));
   g_state.pendingPrompt = -1;
   rebuzzed = false;
   lastDay = -1;
+  recount();
 }
 
 void promptsDemoFire(int idx) {
@@ -96,6 +115,8 @@ void promptsTick() {
   if (tmv.tm_yday != lastDay) {
     lastDay = tmv.tm_yday;
     memset(doneToday, 0, sizeof(doneToday));
+    memset(ackedToday, 0, sizeof(ackedToday));
+    recount();
   }
   if (g_state.pendingPrompt >= 0) return;
 

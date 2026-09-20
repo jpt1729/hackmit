@@ -17,6 +17,14 @@ static uint32_t lastPeakMs = 0;
 
 static uint32_t lastWanderMs = 0;
 
+// Fall signature. A fall is freefall, then an impact, then stillness - all
+// three, in order, inside the configured windows. Any one of them alone is
+// everyday arm movement.
+static uint32_t freefallAtMs = 0;
+static uint32_t impactAtMs = 0;
+static uint32_t fallRearmMs = 0;
+static bool     fallFlag = false;
+
 static bool readAccelMagnitude(float& mag) {
   Wire.beginTransmission(MPU_ADDR);
   Wire.write(0x3B);
@@ -47,6 +55,10 @@ void activityInit() {
   peakIdx = 0;
   lastPeakMs = 0;
   lastWanderMs = 0;
+  freefallAtMs = 0;
+  impactAtMs = 0;
+  fallRearmMs = 0;
+  fallFlag = false;
   stillSinceMs = millis();
 
   Wire.begin(PIN_SDA, PIN_SCL);
@@ -73,7 +85,36 @@ void activityTick() {
     if (oldest && now - oldest < SHAKE_WINDOW_MS) ackFlag = true;
   }
 
+  // Phase 1 and 2 read the raw magnitude: the arm goes light, then lands.
+  bool rearming = fallRearmMs && now - fallRearmMs < FALL_REARM_MS;
+  if (!rearming && !impactAtMs) {
+    if (mag < FALL_FREEFALL_G) {
+      freefallAtMs = now;
+    } else if (freefallAtMs && mag > FALL_IMPACT_G && now - freefallAtMs <= FALL_WINDOW_MS) {
+      impactAtMs = now;
+      freefallAtMs = 0;
+    } else if (freefallAtMs && now - freefallAtMs > FALL_WINDOW_MS) {
+      freefallAtMs = 0;   // went light but landed softly: not a fall
+    }
+  }
+
   ema += (fabsf(mag - 1.0f) - ema) * ACT_EMA_ALPHA;
+
+  // Phase 3 reads the smoothed average, once the impact spike has decayed out
+  // of it. Someone who gets up was not hurt, so movement clears the candidate.
+  if (impactAtMs) {
+    uint32_t sinceImpact = now - impactAtMs;
+    if (sinceImpact >= FALL_SETTLE_MS) {
+      if (ema > FALL_STILL_G) {
+        impactAtMs = 0;
+      } else if (sinceImpact >= FALL_SETTLE_MS + FALL_STILL_MS) {
+        impactAtMs = 0;
+        fallRearmMs = now;
+        fallFlag = true;
+      }
+    }
+  }
+
   bool moving = ema > MOVE_THRESH_G;
   if (moving) stillSinceMs = now;
   bool asleep = now - stillSinceMs > SLEEP_STILL_MIN * 60000UL;
@@ -88,6 +129,12 @@ void activityTick() {
 
 bool activityImuOk() { return imuOk; }
 float activityMotion() { return ema; }
+
+bool activityFallConsume() {
+  if (!fallFlag) return false;
+  fallFlag = false;
+  return true;
+}
 
 bool activityAckConsume() {
   if (!ackFlag) return false;

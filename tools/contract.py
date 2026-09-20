@@ -21,9 +21,13 @@ ACTIVITIES = {"sleeping", "resting", "moving"}
 ROOMS = {"unknown", "kitchen", "bedroom", "living"}
 EVENT_TYPES = {"prompt_fired", "prompt_acked", "prompt_missed",
                "wear_on", "wear_off", "room_change", "wander",
-               "geofence_exit", "geofence_return", "schedule_set"}
+               "geofence_exit", "geofence_return", "schedule_set",
+               "fall_detected", "fall_cancelled", "fall_alert", "fall_ems",
+               "message_received", "message_read", "message_expired"}
+FALL_STAGES = {"none", "confirming", "caregiver", "ems"}
 STATE_KEYS = {"ts", "activity", "room", "roomConfidence", "worn", "wanderFlag",
-              "awayFromHome", "pendingPrompt", "gps"}
+              "awayFromHome", "pendingPrompt", "tasksDone", "tasksTotal",
+              "fallStage", "messageWaiting", "gps"}
 GPS_KEYS = {"fix", "sats", "lat", "lon", "distanceHomeM", "heading"}
 COMPASS = {"", "N", "NE", "E", "SE", "S", "SW", "W", "NW"}
 # firmware/src/schedule.h
@@ -56,9 +60,16 @@ def validate_state(s, schedule_ids=None):
         errs.append(f"room={s['room']!r} not in {sorted(ROOMS)}")
     if "roomConfidence" in s and not (_is_int(s["roomConfidence"]) and 0 <= s["roomConfidence"] <= 100):
         errs.append(f"roomConfidence={s['roomConfidence']!r} not an int 0-100")
-    for k in ("worn", "wanderFlag", "awayFromHome"):
+    for k in ("worn", "wanderFlag", "awayFromHome", "messageWaiting"):
         if k in s and not isinstance(s[k], bool):
             errs.append(f"{k}={s[k]!r} not a bool")
+    for k in ("tasksDone", "tasksTotal"):
+        if k in s and not (_is_int(s[k]) and 0 <= s[k] <= 255):
+            errs.append(f"{k}={s[k]!r} not an int 0-255")
+    if _is_int(s.get("tasksDone")) and _is_int(s.get("tasksTotal"))             and s["tasksDone"] > s["tasksTotal"]:
+        errs.append(f"tasksDone={s['tasksDone']} exceeds tasksTotal={s['tasksTotal']}")
+    if "fallStage" in s and s["fallStage"] not in FALL_STAGES:
+        errs.append(f"fallStage={s['fallStage']!r} not in {sorted(FALL_STAGES)}")
     errs += validate_gps(s.get("gps"))
     p = s.get("pendingPrompt")
     if p is not None and not isinstance(p, str):

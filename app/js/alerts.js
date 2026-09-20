@@ -1,7 +1,10 @@
 import { routineLabel } from "./checklist.js";
 import { ackPending, silenceAway } from "./device.js";
 
-const NOTICE_TYPES = ["wander", "wear_off", "prompt_missed", "geofence_exit"];
+const NOTICE_TYPES = ["fall_detected", "fall_alert", "fall_ems", "fall_cancelled",
+                      "wander", "wear_off", "prompt_missed", "geofence_exit"];
+// Notices that can end with an ambulance get the heavier treatment in the list.
+const SERIOUS = ["fall_detected", "fall_alert", "fall_ems"];
 
 function noticeCopy(event) {
   return {
@@ -13,6 +16,12 @@ function noticeCopy(event) {
     ],
     // The band chimes and points the way home on its own; this is the half of
     // that the caregiver needs to see, and it used to go nowhere.
+    // The live banner covers a fall that is happening now; these are the
+    // record of one, which is what a caregiver reads afterwards.
+    fall_detected: ["Possible fall", "The wristband saw a fall and asked if they were OK."],
+    fall_alert: ["Fall — no answer", "Nobody cancelled the alert on the wristband."],
+    fall_ems: ["Fall — emergency services called", "The alert went unanswered and was escalated."],
+    fall_cancelled: ["Fall alert cleared", "They confirmed they were OK, so nobody was called."],
     geofence_exit: [
       "Left the safe area",
       event.detail
@@ -95,7 +104,7 @@ function renderAlerts(container, events = [], state = null, online = false) {
   const notices = events.filter((event) => NOTICE_TYPES.includes(event.type));
   for (const event of notices.slice(0, 8)) {
     const item = document.createElement("li");
-    item.className = "alert-item";
+    item.className = "alert-item" + (SERIOUS.includes(event.type) ? " alert-serious" : "");
     const title = document.createElement("strong");
     const description = document.createElement("p");
     [title.textContent, description.textContent] = noticeCopy(event);
