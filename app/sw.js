@@ -1,4 +1,4 @@
-const CACHE_NAME = "routine-anchor-v130";
+const CACHE_NAME = "routine-anchor-v131";
 const APP_SHELL = [
   "./",
   "./index.html",
