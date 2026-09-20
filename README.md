@@ -28,6 +28,9 @@ Forgetting medication is not the thing that puts people in care. Losing the abil
 | **Night wandering** | Movement between midnight and 5am. One quiet nudge on the wrist, one notice on the website. |
 | **Voice messages** | Recorded in the browser, stored locally in SQLite, with optional speech-to-text the sender can correct before sending. |
 
+### CAD
+<img width="589" height="596" alt="image" src="https://github.com/user-attachments/assets/0c3d0fb3-ee6e-46cd-a9c7-e55984930c26" />
+
 ## Run it
 
 ```sh
@@ -94,12 +97,3 @@ pio run                            # all five build configurations compile
 ## Hosting
 
 The Pages workflow publishes `app/` on pushes to `main`. GitHub Pages must use **GitHub Actions** as its publishing source; until that setting is changed, the root [`index.html`](index.html) forwards the site's front door to `app/`. Pages hosts the static site only — voice messaging needs the Python server, and a bracelet on a home network is never reachable from it. See the [deployment guide](docs/deployment.md).
-
-## What I know is missing
-
-- **The event log does not survive a reboot.** 200 events in RAM. The routine does persist, in NVS.
-- **The room estimate is a guess.** It needs retraining whenever a router moves, and two rooms that hear the same access points at the same strength cannot be told apart — the trainer says so out loud rather than producing a table that quietly does not work.
-- **Nothing is authenticated.** Anyone on the home WiFi can read the band and push a routine to it, and anyone who can reach the message server can send as either person. That is a deliberate trade for a device with no account and no cloud, and it is the first thing I would change before this went into a real house.
-- **Weekly progress lives in one browser.** It is per-device history, not a record, and a blank day means no data rather than a missed day.
-
-Next, in order: sign the website-to-band connection, persist the event log to flash, and let a caregiver set a reminder's room from the website instead of only its time — the firmware already accepts the field, the editor just does not offer it yet.
