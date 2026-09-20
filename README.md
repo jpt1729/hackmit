@@ -91,3 +91,5 @@ The Pages workflow publishes `app/` on pushes to `main`. GitHub Pages must use *
 - **Weekly progress lives in one browser.** It is per-device history, not a record, and a blank day means no data rather than a missed day.
 
 Next, in order: sign the website-to-band connection, persist the event log to flash, and let a caregiver set a reminder's room from the website instead of only its time — the firmware already accepts the field, the editor just does not offer it yet.
+
+<img width="589" height="596" alt="image" src="https://github.com/user-attachments/assets/0c3d0fb3-ee6e-46cd-a9c7-e55984930c26" />
