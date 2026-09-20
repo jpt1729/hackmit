@@ -5,7 +5,6 @@ import { setupMessages } from "./messages.js";
 import { addTimelineEvent, setTimelineState, renderTimeline, resetTimeline } from "./timeline.js";
 import { renderAlerts } from "./alerts.js";
 import { setupProgress, recordProgressEvent, renderProgress, resetReplayProgress } from "./progress.js";
-import { setupCaregiverContact } from "./contact.js";
 import { setupRoutineEditor } from "./routine-editor.js";
 import { setupLocationMap } from "./location-map.js";
 
@@ -13,7 +12,6 @@ const timelineRoot = document.getElementById("timeline");
 const alertsRoot = document.getElementById("alerts");
 const modeBanner = document.getElementById("mode-banner");
 const modeDescription = document.getElementById("mode-description");
-const sessionDate = document.getElementById("session-date");
 const connectionNotice = document.getElementById("connection-notice");
 const announcement = document.getElementById("routine-announcement");
 const eventLog = [];
@@ -24,9 +22,8 @@ function renderRoutine() {
   renderClock(currentState?.ts, mode === "replay");
 }
 
-setupMessages();
 setupProgress();
-setupCaregiverContact();
+setupMessages();
 setupLocationMap();
 setupRoutineEditor();
 document.addEventListener("routine-change", renderRoutine);
@@ -39,13 +36,6 @@ document.getElementById("main").addEventListener("click", (event) => {
   if (!selected) return;
   announcement.textContent = selected.label + " at " + selected.time + ". " + routineStatus(selected) + ".";
 });
-
-function updateDate() {
-  const date = mode === "replay" ? (currentState?.ts ? new Date(currentState.ts * 1000) : null) : new Date();
-  sessionDate.textContent = date && Number.isFinite(date.getTime())
-    ? (mode === "replay" ? "Recorded on " : "") + date.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric", year: "numeric" })
-    : "Recorded example";
-}
 
 document.addEventListener("mode-change", ({ detail }) => {
   if (detail.mode === "replay" && mode !== "replay") {
@@ -61,9 +51,9 @@ document.addEventListener("mode-change", ({ detail }) => {
   mode = detail.mode;
   renderProgress(currentState?.ts, mode);
   const copy = {
-    live: ["Your wristband is connected.", "Your reminders update here automatically."],
-    connecting: ["Connecting to your wristband…", "Waiting for an update. Your caregiver can check the connection."],
-    unavailable: ["We could not load your routine.", "Please ask your caregiver to check the connection, then reload this page."]
+    live: ["The wristband is connected.", "Reminders update here automatically."],
+    connecting: ["Connecting to the wristband…", "Waiting for a device update."],
+    unavailable: ["We could not load the routine.", "Check the wristband connection, then reload this page."]
   };
   const [title, description] = copy[mode] || ["", ""];
   connectionNotice.hidden = mode === "replay";
@@ -72,7 +62,6 @@ document.addEventListener("mode-change", ({ detail }) => {
     modeBanner.textContent = title;
     modeDescription.textContent = description;
   }
-  updateDate();
   renderClock(currentState?.ts, mode === "replay");
 });
 
@@ -86,7 +75,6 @@ registerStateListener((state) => {
   }
   renderRoutine();
   renderProgress(currentState.ts, mode);
-  updateDate();
 });
 
 registerEventListener((event) => {
@@ -109,7 +97,6 @@ registerEventListener((event) => {
   renderAlerts(alertsRoot, eventLog);
   renderRoutine();
   renderProgress(currentState?.ts, mode);
-  updateDate();
   renderTimeline(timelineRoot);
   const promptMessages = {
     prompt_fired: "Reminder sent.",
