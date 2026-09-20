@@ -44,6 +44,18 @@ The firmware:
 cd firmware && pio run -t upload && pio device monitor   # the band prints its IP at boot
 ```
 
+To show the band itself with no WiFi, no sensors and nothing to set up, there is a
+showcase build that walks the ring and the OLED through every state — reminder,
+acknowledgement, message, geofence, night wander, off-wrist, and the fall ladder —
+on a loop, narrating each scene over the monitor:
+
+```sh
+cd firmware && pio run -e esp32dev_demo -t upload && pio device monitor
+```
+
+It drives the real `g_state` and calls the shipping `ledsTick()`/`displayTick()`,
+so what it shows is what the band does; `-DDEMO_BUZZER=0` runs it silent.
+
 Two things are measurements rather than settings and have to be retaken in a new building:
 
 ```sh
@@ -58,7 +70,7 @@ Venue WiFi often has client isolation, which stops the laptop and the band from 
 ```sh
 python3 tools/contract.py          # the JSON contract, no device needed
 cd firmware && pio test -e native  # 132 logic tests on your laptop, ~6 s
-pio run                            # all four build configurations compile
+pio run                            # all five build configurations compile
 ```
 
 `contract.py` checks the recorded demo data, that the band's fallback routine is one the website knows how to draw, and that the routine the website would push is a body the firmware accepts. The reminder loop — chime, shake, website — has no build flag that removes it; the room estimate, wear estimate and GPS each do.

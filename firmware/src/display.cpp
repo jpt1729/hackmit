@@ -9,6 +9,7 @@
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include "brainbuddy_bmp.h"
 
 static Adafruit_SSD1306 oled(128, 64, &Wire, -1);
 static bool        ok = false;
@@ -140,9 +141,18 @@ void displayTick() {
   } else if (flashing) {
     drawCentered(flashText, strlen(flashText) > 8 ? 2 : 3, 24);
   } else {
-    drawCentered(clock, 3, 4);
-    drawCentered(weekday, 1, 32);
-    drawCentered(status, 1, 44);
+    // Idle: the mascot sits on the left, the clock and status stack to its
+    // right. The IP footer stays full width so a long address still fits.
+    oled.drawBitmap(0, 6, BRAINBUDDY_BMP, BRAINBUDDY_BMP_W, BRAINBUDDY_BMP_H,
+                    SSD1306_WHITE);
+    oled.setTextSize(2);
+    oled.setCursor(52, 10);
+    oled.print(clock);
+    oled.setTextSize(1);
+    oled.setCursor(52, 30);
+    oled.print(weekday);
+    oled.setCursor(52, 42);
+    oled.print(status);
     if (footer[0]) drawCentered(footer, 1, 56);
   }
   oled.display();
