@@ -7,23 +7,27 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <link rel="manifest" href="manifest.json" />
+    <link rel="icon" href="favicon.ico" sizes="16x16 32x32" />
+    <link rel="icon" href="icons/app-icon.svg" type="image/svg+xml" sizes="any" />
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" sizes="180x180" />
     <title>Brain Buddy</title>
+    <link rel="preload" href="fonts/open-sans/open-sans-latin.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="vendor/leaflet/leaflet.css" />
     <link rel="stylesheet" href="css/style.css" />
   </head>
   <body class="caregiver-app">
-    <a class="skip-link" href="#clock-title">Skip to routine</a>
+    <a class="skip-link" href="#routine">Skip to routine</a>
     <main id="main" class="shell" tabindex="-1">
       <div class="app-stage">
       <div id="buddy-scene" class="buddy-scene">
       <section id="brain-buddy" class="brain-buddy-welcome" aria-labelledby="brain-buddy-title">
         <h1 id="brain-buddy-title"><span class="brain-buddy-logo"><img src="icons/brainbuddy.png" width="1366" height="768" alt="Brain Buddy" fetchpriority="high" /></span></h1>
-        <button id="message-open" class="message-invitation" type="button" aria-expanded="false" aria-controls="buddy-messages"><span id="message-invitation-label">Messages</span></button>
+        <button id="message-open" class="message-invitation" type="button" aria-expanded="false" aria-controls="buddy-messages"><span id="message-invitation-label">Click me to view messages!</span></button>
         <button id="brain-buddy-open" class="brain-buddy-button" type="button" aria-label="Open messages" aria-expanded="false" aria-controls="buddy-messages">
         <svg id="brain-mascot" class="brain-mascot" viewBox="0 0 240 200" role="img" aria-label="Brain Buddy, a smiling pink brain with little arms and feet">
           <ellipse class="mascot-shadow" cx="122" cy="184" rx="58" ry="7"/>
           <g class="mascot-body">
-          <g fill="none" stroke="#dbaeae" stroke-width="7" stroke-linecap="round"><path d="m85 153-7 26h-11m85-26 9 26h12"/><path class="mascot-arm" d="M50 111C31 114 21 107 13 96"/><path class="mascot-arm mascot-wave" d="M190 111C209 114 219 107 227 96"/></g>
+          <g fill="none" stroke="#513e54" stroke-width="7" stroke-linecap="round"><path d="m85 153-7 26h-11m85-26 9 26h12"/><path class="mascot-arm" stroke="#513e54" d="M50 111C31 114 21 107 13 96"/><path class="mascot-arm mascot-wave" stroke="#513e54" d="M190 111C209 114 219 107 227 96"/></g>
           <path d="M120 35c-14-15-35-10-43 4-17-3-34 12-31 30-16 10-19 32-7 46-5 18 8 37 25 38 11 21 37 22 56 9 19 13 45 12 56-9 17-1 30-20 25-38 12-14 9-36-7-46 3-18-14-33-31-30-8-14-29-19-43-4Z" fill="#f0bfc6" stroke="#513e54" stroke-width="3.5"/>
           <path d="M120 37v48m0 58v17M78 42c-8 12-1 24 11 27m-40 2c13-4 23 6 23 17m-30 26c8-10 20-10 28-3m-4 43c-5-13 1-23 12-26m84-86c8 12 1 24-11 27m40 2c-13-4-23 6-23 17m30 26c-8-10-20-10-28-3m4 43c5-13-1-23-12-26M92 81c-1-10 5-16 13-16m43 16c1-10-5-16-13-16" fill="none" stroke="#ca899d" stroke-width="4" stroke-linecap="round"/>
           <ellipse class="mascot-eye" cx="92" cy="112" rx="5" ry="7" fill="#3b3049"/><ellipse class="mascot-eye" cx="148" cy="112" rx="5" ry="7" fill="#3b3049"/>
@@ -41,15 +45,15 @@
           </div>
           <p id="messages-status" class="messages-status" data-kind="hint" role="status"></p>
           <div id="message-conversation">
-            <div class="message-compose"><p id="message-recording-help">Record up to 30 seconds, then listen and check the words before sending.</p>
+            <div class="message-compose">
               <label class="transcription-option"><input id="message-transcribe" type="checkbox" checked aria-describedby="transcription-help" /> Add speech to text</label>
               <p id="transcription-help">Your browser's speech service may send audio for processing. Turn this off to record audio only.</p>
               <button id="message-record" class="button button-primary" type="button">Record a voice message</button>
-              <button id="message-text" class="message-text-option" type="button" aria-controls="message-preview" aria-expanded="false">Text your message</button>
+              <button id="message-text" class="message-text-option" type="button" aria-controls="message-preview" aria-expanded="false">or text your message.</button>
               <p id="transcript-status" role="status"></p>
               <div id="message-preview" hidden>
                 <audio id="message-preview-audio" controls aria-label="Listen to your recording"></audio>
-                <label for="message-transcript">Message in words</label>
+                <label id="message-transcript-label" for="message-transcript">Your message</label>
                 <textarea id="message-transcript" rows="3" maxlength="4000" aria-describedby="transcript-help" placeholder="Your message…"></textarea>
                 <p id="transcript-help">Check and correct the words before sending. Speech to text can make mistakes.</p>
                 <div class="message-actions"><button id="message-send" class="button button-primary" type="button">Send message</button><button id="message-discard" class="button button-secondary" type="button">Discard</button></div>
@@ -60,31 +64,27 @@
       </div>
       <div class="day-grid">
         <section id="fall-banner" class="fall-banner" aria-live="assertive" hidden></section>
-
-        <section class="panel clock-panel" aria-labelledby="clock-title">
+        <section id="routine" class="panel clock-panel" aria-label="Routine" tabindex="-1">
           <svg class="cloud-border" viewBox="0 0 480 100" preserveAspectRatio="none" aria-hidden="true">
             <path class="cloud-fill" d="M-4 24C30 10 65 33 82 76C96 52 139 52 161 66C185 51 236 54 258 75C284 59 321 56 343 75C361 36 399 45 410 57C424 15 461 9 484 22V102H-4Z"/>
-            <path class="cloud-outline" d="M-4 24C30 10 65 33 82 76C96 52 139 52 161 66C185 51 236 54 258 75C284 59 321 56 343 75C361 36 399 45 410 57C424 15 461 9 484 22" vector-effect="non-scaling-stroke"/>
           </svg>
-          <div class="section-heading"><div><p class="section-label">At a glance</p><h2 id="clock-title" tabindex="-1">Routine</h2></div><span id="clock-activity-count" class="small-badge"></span></div>
           <div class="view-tabs" role="tablist" aria-label="Routine views">
-            <button id="clock-tab" type="button" role="tab" aria-controls="clock-view" aria-selected="true" tabindex="0">Today’s clock</button>
-            <button id="progress-tab" type="button" role="tab" aria-controls="progress-view" aria-selected="false" tabindex="-1">Weekly progress</button>
+            <button id="clock-tab" type="button" role="tab" aria-controls="clock-view" aria-selected="true" tabindex="0">Daily Routine</button>
+            <button id="progress-tab" type="button" role="tab" aria-controls="progress-view" aria-selected="false" tabindex="-1">Weekly Routine</button>
           </div>
+          <div id="routine-views">
           <div id="clock-view" role="tabpanel" aria-labelledby="clock-tab">
             <div class="clock-scroll">
             <div id="routine-clock" class="routine-clock">
               <svg id="clock-face" viewBox="0 0 400 400" aria-hidden="true"></svg>
-              <div class="clock-center"><span id="clock-time-label">Time</span><strong id="clock-time">—</strong><span id="clock-period"></span></div>
+              <div class="clock-center"><span id="clock-time-label">Current time</span><strong id="clock-time">—</strong><span id="clock-period"></span></div>
               <div id="clock-events" role="group" aria-label="Choose a routine item"></div>
             </div>
             </div>
-            <p id="clock-scroll-help" class="clock-help" hidden>Scroll sideways to see all activity bubbles.</p>
             <p id="routine-empty" class="messages-empty" hidden>No activities scheduled. Add an activity below.</p>
-            <div class="clock-legend"><span><i class="legend-dot" aria-hidden="true"></i> Scheduled</span><span><i class="legend-dot legend-elapsed" aria-hidden="true"></i> Time passed, unconfirmed</span><span><i class="legend-dot legend-done" aria-hidden="true"></i> Received</span><span><i class="legend-dot legend-missed" aria-hidden="true"></i> Missed</span></div>
+            <div class="clock-legend"><span><i class="legend-dot" aria-hidden="true"></i> Scheduled</span><span><i class="legend-dot legend-done" aria-hidden="true"></i> Completed</span><span><i class="legend-dot legend-missed" aria-hidden="true"></i> Missed</span></div>
           </div>
           <div id="progress-view" role="tabpanel" aria-labelledby="progress-tab" hidden tabindex="0">
-            <p class="progress-intro">A gentle look at reminders recorded during the last seven days.</p>
             <p id="progress-summary" class="progress-summary"></p>
             <figure class="progress-chart" aria-labelledby="progress-chart-title" aria-describedby="progress-note">
               <figcaption id="progress-chart-title">Reminders per day</figcaption>
@@ -92,50 +92,59 @@
                 <div id="progress-scale" class="progress-scale" aria-hidden="true"></div>
                 <div id="progress-days" class="progress-days" role="list" aria-label="Daily reminder results"></div>
               </div>
-              <div class="progress-legend"><span><i class="legend-dot legend-done" aria-hidden="true"></i> Received</span><span><i class="legend-dot legend-missed" aria-hidden="true"></i> Missed</span><span><i class="legend-dot legend-elapsed" aria-hidden="true"></i> Unconfirmed</span></div>
+              <div class="progress-legend"><span><i class="legend-dot legend-done" aria-hidden="true"></i> Completed</span><span><i class="legend-dot legend-missed" aria-hidden="true"></i> Missed</span><span><i class="legend-dot" aria-hidden="true"></i> Scheduled</span></div>
             </figure>
-            <p id="progress-note" class="progress-note">“Received” means a wristband shake was recorded. Days marked “No data” have no recorded results.</p>
+            <p id="progress-note" class="progress-note">“Completed” includes wristband acknowledgements and activities manually marked Completed. Days marked “No data” have no recorded results.</p>
+          </div>
           </div>
         </section>
 
-        <section class="panel ring-panel" aria-labelledby="ring-title">
-          <div class="section-heading"><div><p class="section-label">On the wristband</p><h2 id="ring-title" tabindex="-1">Light ring</h2></div></div>
-          <p class="ring-help">The ring on the wristband lights one pixel per reminder. This is what it looks like right now.</p>
-          <div id="routine-ring" aria-live="polite"></div>
-        </section>
-
         <section id="routine-editor" class="panel routine-editor-panel" aria-labelledby="routine-editor-title">
-            <h2 id="routine-editor-title">Routine editor</h2>
-            <p class="editor-help">Add an activity or remove one below. Changes are saved in this browser and update the clock above. Wristband reminders are configured separately.</p>
+            <h2 id="routine-editor-title">Routine Editor</h2>
             <form id="routine-form" class="routine-form">
               <div><label for="routine-name">Activity name</label><input id="routine-name" type="text" maxlength="60" placeholder="e.g. Call a friend" required /></div>
-              <div><label for="routine-time">Time</label><input id="routine-time" type="time" required /></div>
+              <div class="routine-time-window"><div><label for="routine-time">Start time</label><input id="routine-time" type="time" required /></div><div><label for="routine-end-time">End time</label><input id="routine-end-time" type="time" required /></div></div>
               <div><label for="routine-icon">Icon</label><select id="routine-icon">
                 <option value="sun">Sun / morning</option><option value="meal">Meal</option><option value="pill">Medication</option><option value="walk">Walk</option><option value="water">Water</option><option value="rest">Rest</option><option value="puzzle">Puzzle</option><option value="snack">Snack</option><option value="chat">Conversation</option><option value="music">Music</option><option value="moon">Moon / evening</option>
               </select></div>
+              <div><label for="routine-completion">Status</label><select id="routine-completion"><option value="pending" selected>Scheduled</option><option value="done">Completed</option><option value="missed">Missed</option></select></div>
+              <div class="routine-notes-field"><label for="routine-notes">Notes (optional)</label><textarea id="routine-notes" rows="3" maxlength="1000" placeholder="Add any details about this activity…"></textarea></div>
               <button class="button button-primary" type="submit">Add activity</button>
             </form>
             <p id="routine-editor-status" class="messages-status" role="status"></p>
+            <details class="routine-list-dropdown">
+              <summary>Routine List</summary>
+              <ul id="routine-editor-list" class="routine-editor-list" aria-label="Activities in your routine"></ul>
+            </details>
+        </section>
+
+        <section id="wristband" class="panel wristband-panel" aria-labelledby="wristband-title">
+          <h2 id="wristband-title" tabindex="-1">Wristband</h2>
+          <section class="wristband-feature" aria-labelledby="ring-title">
+            <h3 id="ring-title">Light ring</h3>
+            <p class="ring-help">See the light ring and reminder progress reported by the wristband.</p>
+            <div id="routine-ring" aria-live="polite"></div>
+          </section>
+          <section class="wristband-feature" aria-labelledby="routine-sync-title">
+            <h3 id="routine-sync-title">Routine on the wristband</h3>
             <div class="routine-sync">
               <p id="routine-sync-status" class="routine-sync-status" role="status">Waiting for the wristband before sending the routine.</p>
               <button id="routine-sync-now" class="button button-secondary" type="button" disabled>Send routine to wristband</button>
             </div>
-            <ul id="routine-editor-list" class="routine-editor-list" aria-label="Activities in your routine"></ul>
-        </section>
-
-        <section class="panel watch-message-panel" aria-labelledby="watch-message-title">
-          <div class="section-heading"><div><p class="section-label">On the wristband</p><h2 id="watch-message-title" tabindex="-1">Send a note to the screen</h2></div></div>
-          <p class="editor-help">A short line of text appears on the wristband screen and stays there until they shake it away.</p>
-          <form id="watch-message-form" class="routine-form">
-            <div><label for="watch-message-text">Note</label><input id="watch-message-text" type="text" maxlength="96" placeholder="e.g. Lunch is in the fridge" autocomplete="off" /></div>
-            <button id="watch-message-send" class="button button-primary" type="submit">Send to wristband</button>
-          </form>
-          <p id="watch-message-count" class="message-count" aria-hidden="true">0/96</p>
-          <p id="watch-message-status" class="messages-status" role="status"></p>
+          </section>
+          <section class="wristband-feature" aria-labelledby="watch-message-title">
+            <h3 id="watch-message-title">Send a note to the screen</h3>
+            <form id="watch-message-form" class="watch-message-form">
+              <div><label for="watch-message-text">Note</label><input id="watch-message-text" type="text" maxlength="96" placeholder="e.g. Lunch is in the fridge" autocomplete="off" /></div>
+              <button id="watch-message-send" class="button button-primary" type="submit">Send to wristband</button>
+            </form>
+            <p id="watch-message-count" class="message-count" aria-hidden="true">0/96</p>
+            <p id="watch-message-status" class="messages-status" role="status"></p>
+          </section>
         </section>
 
         <section class="panel location-section" aria-labelledby="location-title">
-          <div class="section-heading"><h2 id="location-title" tabindex="-1">Bracelet location</h2></div>
+          <div class="section-heading"><h2 id="location-title" tabindex="-1">Location</h2></div>
           <p id="location-status" class="location-status" role="status">Waiting for GPS.</p>
           <figure class="location-map">
             <div class="location-map-frame">
@@ -152,26 +161,40 @@
         </section>
 
         <section id="notices" class="panel notices-panel" aria-labelledby="notices-title">
-          <div class="section-heading"><h2 id="notices-title" tabindex="-1">Notices</h2></div>
+          <div class="section-heading"><h2 id="notices-title" tabindex="-1">Updates</h2></div>
           <section id="connection-notice" class="mode-notice" aria-label="Bracelet connection" hidden>
             <span class="connection-dot" aria-hidden="true"></span>
             <div><p id="mode-banner" class="notice-title" role="status">Loading your routine…</p><p id="mode-description" class="notice-description"></p></div>
           </section>
-          <div id="alerts" aria-label="Wristband notices"></div>
+          <div id="alerts" aria-label="Wristband updates"></div>
           <h3 class="activity-heading">Bracelet activity</h3>
           <div id="timeline" aria-label="Device and recent activity"></div>
         </section>
       </div>
-      <nav class="bottom-nav" aria-label="Caregiver navigation">
-        <button id="nav-message" type="button" aria-controls="buddy-messages" aria-expanded="false">Message</button>
-        <a id="nav-routine" href="#clock-title">Routine</a>
-        <a id="nav-map" href="#location-title">Map</a>
-        <a id="nav-notices" href="#notices-title">Notices</a>
-      </nav>
       </div>
       <p id="routine-announcement" class="sr-only" role="status" aria-atomic="true"></p>
       <noscript><p class="mode-notice">JavaScript is needed to show the routine and messages.</p></noscript>
     </main>
+    <nav class="bottom-nav" aria-label="Caregiver navigation">
+      <button id="nav-message" type="button" aria-controls="buddy-messages" aria-expanded="false">Messages</button>
+      <a id="nav-routine" href="#routine">Routine</a>
+      <a id="nav-wristband" href="#wristband-title">Wristband</a>
+      <a id="nav-map" href="#location-title">Location</a>
+      <a id="nav-notices" href="#notices-title">Updates</a>
+    </nav>
+    <dialog id="routine-edit-dialog" class="routine-edit-dialog" aria-labelledby="routine-edit-title">
+      <h2 id="routine-edit-title">Edit activity</h2>
+      <form id="routine-edit-form" class="routine-form">
+        <div><label for="routine-edit-name">Activity name</label><input id="routine-edit-name" type="text" maxlength="60" required /></div>
+        <div class="routine-time-window"><div><label for="routine-edit-time">Start time</label><input id="routine-edit-time" type="time" required /></div><div><label for="routine-edit-end-time">End time</label><input id="routine-edit-end-time" type="time" required /></div></div>
+        <div><label for="routine-edit-icon">Icon</label><select id="routine-edit-icon"></select></div>
+        <div><label for="routine-edit-completion">Status</label><select id="routine-edit-completion"><option value="pending">Scheduled</option><option value="done">Completed</option><option value="missed">Missed</option></select></div>
+        <div class="routine-notes-field"><label for="routine-edit-notes">Notes (optional)</label><textarea id="routine-edit-notes" rows="3" maxlength="1000" placeholder="Add any details about this activity…"></textarea></div>
+        <p id="routine-edit-status" class="routine-notes-field messages-status" role="status"></p>
+        <div class="routine-edit-actions"><button class="button button-primary" type="submit">Save changes</button><button id="routine-edit-cancel" class="button button-secondary" type="button">Cancel</button></div>
+      </form>
+    </dialog>
+    <div id="routine-tooltip" class="routine-tooltip" role="tooltip" hidden><strong></strong><span></span></div>
     <script defer src="vendor/leaflet/leaflet.js"></script>
     <script type="module" src="js/app.js"></script>
   </body>

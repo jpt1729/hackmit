@@ -1,4 +1,4 @@
-import { deviceHost, postDevice } from "./api.js";
+import { deviceCommand, deviceOnline } from "./api.js";
 
 // The fall banner. It is deliberately the loudest thing on the page: if it is
 // showing, nothing else on the dashboard matters.
@@ -30,15 +30,16 @@ function setStatus(text) {
 }
 
 async function clearFall() {
-  if (!deviceHost()) return;
+  if (!deviceOnline()) return;
   button.disabled = true;
   setStatus("Clearing…");
   try {
-    await postDevice("/fall/cancel");
-    setStatus("Cleared.");
+    await deviceCommand("/fall/cancel");
+    setStatus("Cleared on the wristband.");
   } catch (error) {
-    console.warn("Could not clear the fall alert:", error);
-    setStatus("Could not reach the wristband. Try again.");
+    // Say what actually went wrong: a caregiver needs to know the band is
+    // still alarming, not just that a button did nothing.
+    setStatus(`The alert is still active: ${error.message}`);
     button.disabled = false;
   }
 }
@@ -78,12 +79,12 @@ function renderFall(state) {
   button.textContent = copy.action;
   button.addEventListener("click", clearFall);
   // Replay has no wristband to tell, so the control is shown but inert.
-  button.disabled = !deviceHost();
+  button.disabled = !deviceOnline();
 
   status = document.createElement("p");
   status.className = "fall-status";
   status.setAttribute("role", "status");
-  if (!deviceHost()) setStatus("This is a recorded example — no wristband is connected.");
+  if (!deviceOnline()) setStatus("This is a recorded example — no wristband is connected.");
 
   root.replaceChildren(title, description, button, status);
 }

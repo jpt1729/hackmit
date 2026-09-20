@@ -12,6 +12,7 @@ const textButton = document.getElementById("message-text");
 const preview = document.getElementById("message-preview");
 const previewAudio = document.getElementById("message-preview-audio");
 const transcriptInput = document.getElementById("message-transcript");
+const transcriptLabel = document.getElementById("message-transcript-label");
 const transcribeOption = document.getElementById("message-transcribe");
 const transcriptStatus = document.getElementById("transcript-status");
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -40,7 +41,7 @@ let lastReadMessage = 0;
 try { lastReadMessage = Number(localStorage.getItem("brain-buddy-caregiver-last-read-message")) || 0; } catch { /* Reading messages still works without storage. */ }
 
 function updateInvitation() {
-  invitationLabel.textContent = latestIncomingMessage && latestIncomingMessage.id > lastReadMessage ? "New message" : "Messages";
+  invitationLabel.textContent = latestIncomingMessage && latestIncomingMessage.id > lastReadMessage ? "New message" : "Click me to view messages!";
 }
 
 function markMessageRead() {
@@ -166,6 +167,14 @@ function stopMicrophone() {
   transcribeOption.disabled = !SpeechRecognition;
 }
 
+function setPreviewMode(isVoice) {
+  transcriptLabel.textContent = isVoice ? "Optional: edit transcription" : "Your message";
+  transcriptInput.placeholder = isVoice
+    ? "No transcription available. Add words here (optional)."
+    : "Your message…";
+  textButton.hidden = isVoice;
+}
+
 function discardAudio() {
   draftVersion++;
   cancelTranscription();
@@ -181,6 +190,7 @@ function discardAudio() {
   previewAudio.hidden = true;
   transcriptInput.value = "";
   transcriptStatus.textContent = "";
+  setPreviewMode(false);
 }
 
 function showPreview(blob) {
@@ -195,15 +205,17 @@ function showPreview(blob) {
   }
   if (previewUrl) URL.revokeObjectURL(previewUrl);
   pendingAudio = blob;
+  setPreviewMode(true);
   previewUrl = URL.createObjectURL(blob);
   previewAudio.src = previewUrl;
   previewAudio.hidden = false;
   preview.hidden = false;
   textButton.setAttribute("aria-expanded", "true");
-  setStatus("Listen to your message and check its words, then send when you are ready.");
+  setStatus("");
 }
 
 function showTextPreview(moveFocus = true) {
+  setPreviewMode(Boolean(pendingAudio));
   preview.hidden = false;
   previewAudio.hidden = !pendingAudio;
   textButton.setAttribute("aria-expanded", "true");
@@ -258,7 +270,12 @@ function createMessageCard(message) {
       if (!audio.paused) { audio.pause(); return; }
       document.querySelectorAll("audio").forEach((other) => { if (other !== audio) other.pause(); });
       try { await audio.play(); }
-      catch { setStatus("This recording could not play. Please try again.", "error"); }
+      catch (error) {
+        if (error.name === "AbortError") return;
+        setStatus(error.name === "NotAllowedError"
+          ? "Audio playback is blocked here. Open Brain Buddy in a browser tab to listen."
+          : "This player could not open the recording. If you’re in the editor preview, open Brain Buddy in a browser tab to listen.", "error");
+      }
     });
     card.append(play);
   }
@@ -366,7 +383,7 @@ recordButton.addEventListener("click", async () => {
       return;
     }
     microphone = stream;
-    const mimeType = ["audio/webm;codecs=opus", "audio/mp4", "audio/webm", "audio/ogg"].find((type) => MediaRecorder.isTypeSupported(type));
+    const mimeType = ["audio/mp4", "audio/webm;codecs=opus", "audio/webm", "audio/ogg"].find((type) => MediaRecorder.isTypeSupported(type));
     const chunks = [];
     recorder = new MediaRecorder(microphone, mimeType ? { mimeType } : undefined);
     recorder.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); };
@@ -388,7 +405,7 @@ recordButton.addEventListener("click", async () => {
     startTranscription();
     recordButton.textContent = "Stop recording";
     recordButton.dataset.recording = "true";
-    setStatus("Recording…", "status");
+    setStatus("");
     recordingTimer = setTimeout(() => { if (recorder?.state === "recording") recorder.stop(); }, 30_000);
   } catch {
     cancelTranscription();
@@ -400,7 +417,7 @@ recordButton.addEventListener("click", async () => {
   }
 });
 
-discardButton.addEventListener("click", () => { discardAudio(); setStatus("Message discarded.", "status"); });
+discardButton.addEventListener("click", () => { discardAudio(); setStatus(""); });
 sendButton.addEventListener("click", async () => {
   if (sending) return;
   if (!pendingAudio && !transcriptInput.value.trim()) {
@@ -412,7 +429,7 @@ sendButton.addEventListener("click", async () => {
   const senderRole = SENDER_ROLE;
   const controls = [sendButton, recordButton, textButton, discardButton, transcriptInput];
   controls.forEach((control) => { control.disabled = true; });
-  setStatus("Sending…", "status");
+  setStatus("");
   try {
     let audio = null;
     if (pendingAudio) {
@@ -423,7 +440,7 @@ sendButton.addEventListener("click", async () => {
     }
     await api("messages", { method: "POST", body: JSON.stringify({ senderRole, audio, transcript: transcriptInput.value.trim() }) });
     discardAudio();
-    setStatus("Message sent", "status");
+    setStatus("");
     followNewestMessage = true;
     refreshMessages();
   } catch (error) { setStatus(error.message, "error"); }
@@ -438,7 +455,6 @@ async function setupMessages() {
   }
   if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
     recordButton.hidden = true;
-    document.getElementById("message-recording-help").textContent = "Recording needs a supported browser on HTTPS or localhost. You can still listen to received messages here.";
   }
   setConversationOpen(false);
   renderHistory();

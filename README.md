@@ -34,7 +34,7 @@ Forgetting medication is not the thing that puts people in care. Losing the abil
 python3 tools/message_server.py
 ```
 
-Open [127.0.0.1:8787](http://127.0.0.1:8787/). Python 3 is the only dependency; there is no frontend build step. To connect a bracelet on the same network, append `?device=ESP32_IP`.
+Open [Brain Buddy](http://127.0.0.1:8787/). The app is a caregiver dashboard with **Messages / Routine / Wristband / Location / Updates** navigation. To connect a bracelet on your local network, open `http://127.0.0.1:8787/?device=ESP32_IP`.
 
 With no band on the network the site replays `app/data/demo.json`, a real session recorded off the hardware with `tools/capture_demo.py`. That is also what the published site serves, because it is HTTPS and browsers will not let an HTTPS page talk to a device at `http://192.168.x.x`. The split is not a workaround I am apologising for — it is the "no cloud" claim being literally true.
 
