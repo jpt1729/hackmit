@@ -1,3 +1,7 @@
+import { saveLocalMessage, listLocalMessages } from "./local-messages.js";
+
+const localDemo = new URLSearchParams(location.search).get("messages") === "local" || location.hostname.endsWith(".github.io");
+const localAudioUrls = new Map();
 const status = document.getElementById("messages-status");
 const messageThread = document.getElementById("message-thread");
 const messageList = document.getElementById("message-list");
@@ -140,6 +144,10 @@ function stopTranscription() {
 }
 
 async function api(path, options = {}) {
+  if (localDemo) {
+    const before = new URL(path, location.href).searchParams.get("before");
+    return listLocalMessages(before);
+  }
   const response = await fetch(`api/voice/${path}`, {
     cache: "no-store",
     credentials: "same-origin",
@@ -251,7 +259,10 @@ function createMessageCard(message) {
     audio.controls = true;
     audio.preload = "none";
     audio.setAttribute("aria-label", `${heading.textContent}, ${timestamp.textContent}`);
-    audio.src = `api/voice/messages/${message.id}/audio`;
+    if (localDemo) {
+      if (!localAudioUrls.has(message.id)) localAudioUrls.set(message.id, URL.createObjectURL(message.audio_blob));
+      audio.src = localAudioUrls.get(message.id);
+    } else audio.src = `api/voice/messages/${message.id}/audio`;
     card.append(audio);
     const play = document.createElement("button");
     play.type = "button";
@@ -358,7 +369,7 @@ async function refreshMessages() {
     }
     renderHistory();
   } catch (error) {
-    setStatus("Messages are unavailable right now. Please try again shortly.", "error");
+    setStatus(localDemo ? "Browser storage is unavailable. Allow this site to save data to use demo messages." : "Messages are unavailable right now. Please try again shortly.", "error");
     if (!latestIncomingMessage) {
       const empty = messageList.querySelector(".messages-empty");
       if (empty) empty.textContent = "Messages unavailable";
@@ -431,14 +442,19 @@ sendButton.addEventListener("click", async () => {
   controls.forEach((control) => { control.disabled = true; });
   setStatus("");
   try {
-    let audio = null;
-    if (pendingAudio) {
-      const bytes = new Uint8Array(await pendingAudio.arrayBuffer());
-      let binary = "";
-      for (const byte of bytes) binary += String.fromCharCode(byte);
-      audio = { data: btoa(binary), mimeType: pendingAudio.type };
+    if (localDemo) {
+      try { await saveLocalMessage(transcriptInput.value.trim(), pendingAudio); }
+      catch { throw new Error("Could not save this message in your browser. Your draft is still here; check that browser storage is available."); }
+    } else {
+      let audio = null;
+      if (pendingAudio) {
+        const bytes = new Uint8Array(await pendingAudio.arrayBuffer());
+        let binary = "";
+        for (const byte of bytes) binary += String.fromCharCode(byte);
+        audio = { data: btoa(binary), mimeType: pendingAudio.type };
+      }
+      await api("messages", { method: "POST", body: JSON.stringify({ senderRole, audio, transcript: transcriptInput.value.trim() }) });
     }
-    await api("messages", { method: "POST", body: JSON.stringify({ senderRole, audio, transcript: transcriptInput.value.trim() }) });
     discardAudio();
     setStatus("");
     followNewestMessage = true;
@@ -448,6 +464,7 @@ sendButton.addEventListener("click", async () => {
 });
 
 async function setupMessages() {
+  document.getElementById("message-demo-note").hidden = !localDemo;
   if (!SpeechRecognition) {
     transcribeOption.checked = false;
     transcribeOption.disabled = true;

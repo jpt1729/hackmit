@@ -41,3 +41,7 @@ Open `http://127.0.0.1:8787/`. For a live wristband, append `?device=ESP32_IP`. 
 The page uses Open Sans throughout, with bold headings, and follows the browser's default text size. Font files are bundled locally and cached for offline use. Clock symbols show reminder status with colors and accessible labels; there is no separate morning routine reminder box or text-size control. The clock has a **Weekly Routine** tab with seven vertical stacked bars (purple for received, red for missed, amber for unconfirmed) on a shared count axis. It summarizes only `prompt_fired`, `prompt_acked`, and `prompt_missed` events the browser has observed. Live history is stored in that browser for up to 45 days; replay history is kept separate and resets when replay starts. A blank day means there is no recorded data, not that the person missed every task.
 
 ESP32 wearable for people with dementia/TBI. Gentle haptic prompts tied to time + room-level location, with a caregiver dashboard and local voice messaging. ~$15 of parts for the original wearable prototype, excluding the message server.
+
+## Browser-only messaging demo
+
+On GitHub Pages, text messages and voice recordings are saved in this browser using IndexedDB. Recordings can be replayed after reloading; text-only messages have no audio control. A small “Demo · this browser only” label distinguishes this from delivery to another person. Use `?messages=local` to enable this mode on other hosts. Browser messages are separate from the Python server database and are removed if site data is cleared.
