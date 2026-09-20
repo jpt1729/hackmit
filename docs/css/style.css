@@ -258,3 +258,43 @@ button { cursor: pointer; }
 .routine-editor-icon svg { width: 27px; height: 27px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .routine-remove { color: var(--missed-bg); background: var(--panel); font-size: 0.85em; flex-shrink: 0; }
 @media (max-width: 600px) { .routine-form { grid-template-columns: minmax(0, 1fr); } }
+
+/* ---------------------------------------------------------------- fall banner
+   Deliberately the loudest block on the page: if it is showing, nothing else
+   on the dashboard matters. */
+.fall-banner { display: grid; gap: 0.5rem; justify-items: start; margin: 0 0 1.25rem; padding: 1.1rem 1.25rem; border-radius: 14px; border: 2px solid var(--missed-bg); background: var(--missed-soft); }
+.fall-banner h2 { margin: 0; color: var(--missed-bg); font-size: 1.35rem; }
+.fall-banner p { margin: 0; color: var(--ink); }
+.fall-banner .button-primary { margin-top: 0.35rem; }
+.fall-banner .fall-status { color: var(--muted); font-size: 0.92rem; }
+/* The two escalated stages invert, so a glance at the page cannot miss them. */
+.fall-banner.fall-caregiver, .fall-banner.fall-ems { background: var(--missed-bg); border-color: var(--missed-bg); }
+.fall-banner.fall-caregiver h2, .fall-banner.fall-ems h2,
+.fall-banner.fall-caregiver p, .fall-banner.fall-ems p { color: var(--missed-ink); }
+.fall-banner.fall-caregiver .fall-status, .fall-banner.fall-ems .fall-status { color: #ffe2e7; }
+/* The default disabled style is grey on white, which vanishes on the inverted
+   stages. Keep it legible, and keep it obviously not-clickable. */
+.fall-banner.fall-caregiver .button, .fall-banner.fall-ems .button { color: var(--missed-bg); background: var(--missed-ink); border-color: var(--missed-ink); }
+.fall-banner.fall-caregiver .button:disabled, .fall-banner.fall-ems .button:disabled { color: var(--missed-bg); background: #f2c3cc; border-color: #f2c3cc; opacity: 1; }
+
+.alert-item.alert-serious { border-left: 5px solid var(--missed-bg); padding-left: 0.75rem; }
+.alert-item.alert-serious strong { color: var(--missed-bg); }
+
+/* ---------------------------------------------------------------- light ring
+   A screen copy of the twelve NeoPixels on the wristband. */
+.ring-help { margin: 0 0 0.9rem; color: var(--muted); }
+.ring { display: grid; place-items: center; }
+.ring-dial { position: relative; width: 120px; height: 120px; border-radius: 50%; background: var(--panel-raised); border: 1px solid var(--subtle-border); }
+.ring-pixel { position: absolute; top: 50%; left: 50%; width: 11px; height: 11px; margin: -5.5px; border-radius: 50%; background: var(--clock-track); transform-origin: center; }
+.ring-pixel.lit { background: #1f9e4a; box-shadow: 0 0 6px rgba(31, 158, 74, 0.55); }
+.ring-centre { position: absolute; inset: 0; display: grid; align-content: center; justify-items: center; }
+.ring-centre strong { font-size: 1.3rem; line-height: 1.1; }
+.ring-centre span { color: var(--muted); font-size: 0.8rem; }
+.ring-complete .ring-dial { border-color: #1f9e4a; }
+.ring-caption { margin: 0.85rem 0 0; color: var(--muted); font-size: 0.95rem; text-align: center; }
+
+.message-count { margin: 0.15rem 0 0; color: var(--muted); font-size: 0.85rem; text-align: right; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ring-pixel { box-shadow: none; }
+}

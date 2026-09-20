@@ -47,6 +47,28 @@
 #define WANDER_END_H        5
 #define WANDER_COOLDOWN_MIN 30
 
+// ---------------------------------------------------------------- fall detection (MPU-6050)
+// A real fall is three phases, not one spike: the wrist goes light on the way
+// down, slams, then stops moving. Requiring all three is what keeps setting a
+// mug down hard or dropping into an armchair from calling an ambulance.
+#define FALL_FREEFALL_G     0.55f    // below 1g: the arm is unloaded, falling
+#define FALL_IMPACT_G       2.20f    // the landing spike
+#define FALL_WINDOW_MS      900      // freefall must be followed by impact this fast
+#define FALL_STILL_G        0.045f   // smoothed motion under this counts as "not moving"
+#define FALL_SETTLE_MS      1200     // let the impact spike decay out of the average first
+#define FALL_STILL_MS       2500     // stillness this long after impact confirms it
+#define FALL_REARM_MS       10000    // ignore new candidates this long after one fires
+
+// The escalation ladder. Nothing auto-dials anyone until both timers expire
+// and every prompt to cancel has gone unanswered.
+#define FALL_CANCEL_MS      30000    // "are you OK? shake to cancel" window
+#define FALL_EMS_MS         60000    // caregiver alerted this long with no answer -> EMS
+#define FALL_CHIME_MS       8000     // re-chime cadence while a fall is unresolved
+
+// ---------------------------------------------------------------- caregiver messages (OLED)
+#define MSG_MAX_LEN         96       // longer messages are truncated on the wrist
+#define MSG_TTL_MS          600000   // unread this long: stop holding the screen
+
 // ---------------------------------------------------------------- wear (inferred from the IMU)
 // No electrode in the BOM: a worn device always shows micro-motion (breathing,
 // pulse, tiny drift). A device on a table is dead still. That is the signal.
@@ -71,6 +93,7 @@
 #define LED_BRIGHTNESS     40      // 0-255. Dim on purpose: it is a night-time device.
 #define LED_FRAME_MS       40      // 25 fps animation tick
 #define LED_ACK_FLASH_MS   3000
+#define LED_PROGRESS_MIN_V 12      // unfinished pixels glow this dim, so 0/N still reads as a ring
 
 // ---------------------------------------------------------------- location (WiFi RSSI)
 #define LOC_SCAN_INTERVAL_MS 15000

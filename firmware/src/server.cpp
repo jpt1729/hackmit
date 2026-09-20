@@ -3,6 +3,8 @@
 #include "events.h"
 #include "prompts.h"
 #include "safety.h"
+#include "fall.h"
+#include "message.h"
 #include "gps.h"
 #include <WebServer.h>
 #include <sys/time.h>
@@ -35,14 +37,18 @@ static void handleState() {
              "{\"fix\":false,\"sats\":%u,\"lat\":null,\"lon\":null,\"distanceHomeM\":null,\"heading\":\"\"}",
              g_state.sats);
 
-  char out[512];
+  char out[768];
   snprintf(out, sizeof(out),
            "{\"ts\":%lu,\"activity\":\"%s\",\"room\":\"%s\",\"roomConfidence\":%u,"
-           "\"worn\":%s,\"wanderFlag\":%s,\"awayFromHome\":%s,\"pendingPrompt\":%s,\"gps\":%s}",
+           "\"worn\":%s,\"wanderFlag\":%s,\"awayFromHome\":%s,\"pendingPrompt\":%s,"
+           "\"tasksDone\":%u,\"tasksTotal\":%u,\"fallStage\":\"%s\",\"messageWaiting\":%s,"
+           "\"gps\":%s}",
            (unsigned long)time(nullptr), activityName(g_state.activity), roomName(g_state.room),
            g_state.roomConfidence, g_state.worn ? "true" : "false",
            g_state.wanderFlag ? "true" : "false", g_state.awayFromHome ? "true" : "false",
-           pending, gps);
+           pending, g_state.tasksDone, g_state.tasksTotal,
+           fallStageName(g_state.fallStage), g_state.messageWaiting ? "true" : "false",
+           gps);
   reply(200, out);
 }
 
@@ -56,6 +62,29 @@ static void handleAck() {
 // Stop the away-from-home chime; the alert stays up on the dashboard.
 static void handleSilence() {
   safetySilence();
+  reply(200, "{\"ok\":true}");
+}
+
+// Clear a fall from the dashboard: the caregiver has eyes on them and knows
+// they are fine. Same effect as a shake on the wrist.
+static void handleFallCancel() {
+  if (!fallActive()) return reply(409, "{\"error\":\"no fall in progress\"}");
+  fallCancel();
+  reply(200, "{\"ok\":true}");
+}
+
+// Put a short note on the OLED. The dashboard sends the transcript of a voice
+// message here so it also lands on the wrist.
+static void handleMessage() {
+  String text = http.hasArg("text") ? http.arg("text") : http.arg("plain");
+  text.trim();
+  if (!text.length()) return reply(400, "{\"error\":\"missing text\"}");
+  messageSet(text.c_str());
+  reply(200, "{\"ok\":true}");
+}
+
+static void handleMessageDismiss() {
+  messageDismiss();
   reply(200, "{\"ok\":true}");
 }
 
@@ -86,7 +115,11 @@ void serverInit() {
   http.on("/ack",       HTTP_POST, handleAck);
   http.on("/silence",   HTTP_POST, handleSilence);
   http.on("/time",      HTTP_POST, handleTime);
-  for (const char* path : {"/state", "/events", "/demo/fire", "/ack", "/silence", "/time"}) {
+  http.on("/fall/cancel",      HTTP_POST, handleFallCancel);
+  http.on("/message",          HTTP_POST, handleMessage);
+  http.on("/message/dismiss",  HTTP_POST, handleMessageDismiss);
+  for (const char* path : {"/state", "/events", "/demo/fire", "/ack", "/silence", "/time",
+                           "/fall/cancel", "/message", "/message/dismiss"}) {
     http.on(path, HTTP_OPTIONS, [] {
       cors();
       http.send(204);

@@ -11,6 +11,8 @@
 #include "leds.h"
 #include "prompts.h"
 #include "safety.h"
+#include "fall.h"
+#include "message.h"
 #include "server.h"
 #include "display.h"
 
@@ -57,6 +59,8 @@ void setup() {
   gpsInit();                        // also sets the clock if NTP is blocked
   promptsInit();
   safetyInit();
+  fallInit();
+  messageInit();
   serverInit();
 
   static char footer[24];
@@ -69,11 +73,13 @@ void setup() {
 }
 
 void loop() {
-  activityTick();     // IMU: activity, shake-ack, wander flag
+  activityTick();     // IMU: activity, shake-ack, fall signature, wander flag
   wearTick();         // on-body estimate, from the IMU
   gpsTick();          // NMEA in, fix + geofence out
   locationTick();     // WiFi RSSI room estimate
+  fallTick();         // fall ladder - before prompts: a shake cancels the fall first
   promptsTick();      // the product: schedule, gating, ack window
+  messageTick();      // caregiver note on the OLED, dismissed by a shake
   safetyTick();       // away-from-home and night-wander chimes
   buzzerTick();       // non-blocking note sequencer
   ledsTick();         // ring animation

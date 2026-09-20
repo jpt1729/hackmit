@@ -1,6 +1,7 @@
 #include "display.h"
 #include "config.h"
 #include "gps.h"
+#include "message.h"
 
 #if ENABLE_DISPLAY
 
@@ -17,7 +18,8 @@ static char        footer[24] = "";
 static char        shownKey[96] = "";
 
 static void printWrapped(const char* text, size_t cols) {
-  char buf[64];
+  // Must hold the longest thing we ever wrap, which is a caregiver message.
+  char buf[MSG_MAX_LEN + 1];
   strlcpy(buf, text, sizeof(buf));
   size_t used = 0;
   for (char* word = strtok(buf, " "); word; word = strtok(nullptr, " ")) {
@@ -100,17 +102,40 @@ void displayTick() {
   statusLine(status, sizeof(status));
 
   // Full redraws cost ~25 ms of I2C, so only redraw when the content changes.
-  char key[96];
-  snprintf(key, sizeof(key), "%d|%s|%s|%s|%s", p, flashing ? flashText : "", clock, status, footer);
+  bool msg = messagePending() && g_state.fallStage == FALL_NONE && p < 0;
+  char key[192];
+  snprintf(key, sizeof(key), "%d|%u|%d|%s|%s|%s|%s", p, (unsigned)g_state.fallStage,
+           msg ? 1 : 0, flashing ? flashText : "", clock, status, footer);
   if (strcmp(key, shownKey) == 0) return;
   strlcpy(shownKey, key, sizeof(shownKey));
 
   oled.clearDisplay();
-  if (p >= 0) {
+  if (g_state.fallStage != FALL_NONE) {
+    // A fall owns the whole screen. The wearer may be on the floor and looking
+    // at it sideways, so it is the largest, shortest text the panel can show.
+    const char* head = g_state.fallStage == FALL_CONFIRMING ? "Are you OK?"
+                     : g_state.fallStage == FALL_CAREGIVER  ? "Calling"
+                                                            : "Help coming";
+    const char* foot = g_state.fallStage == FALL_CONFIRMING ? "Shake if you are OK"
+                     : g_state.fallStage == FALL_CAREGIVER  ? "Caregiver told"
+                                                            : "Emergency called";
+    oled.setTextSize(2);
+    oled.setCursor(0, 8);
+    printWrapped(head, 10);
+    drawCentered(foot, 1, 56);
+  } else if (p >= 0) {
     oled.setTextSize(2);
     oled.setCursor(0, 0);
     printWrapped(SCHEDULE[p].label, 10);
     drawCentered("Shake to confirm", 1, 56);
+  } else if (msg) {
+    oled.setTextSize(1);
+    oled.setCursor(0, 0);
+    oled.println("Message for you");
+    oled.println();
+    oled.setTextSize(1);
+    printWrapped(messageText(), 21);
+    drawCentered("Shake to clear", 1, 56);
   } else if (flashing) {
     drawCentered(flashText, strlen(flashText) > 8 ? 2 : 3, 24);
   } else {

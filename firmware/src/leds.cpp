@@ -18,11 +18,23 @@ const char* ledsModeName(LedMode m) {
     case LED_ACK:     return "ack";
     case LED_OFFBODY: return "offbody";
     case LED_NIGHT:   return "night";
+    case LED_PROGRESS: return "progress";
     default:          return "idle";
   }
 }
 
 LedMode ledsMode() { return mode; }
+
+// Round to nearest, but never round a part-done day down to an empty ring or
+// an unfinished one up to a full one - those two both have to mean something.
+uint8_t ledsProgressPixels(uint8_t done, uint8_t total) {
+  if (!total) return 0;
+  if (done >= total) return LED_COUNT;
+  uint8_t px = (uint8_t)(((uint16_t)done * LED_COUNT + total / 2) / total);
+  if (done > 0 && px == 0) px = 1;
+  if (px >= LED_COUNT) px = LED_COUNT - 1;
+  return px;
+}
 
 void ledsFlash(LedMode m, uint32_t ms) {
   override_ = m;
@@ -34,10 +46,12 @@ void ledsBootDone() { booting = false; }
 static LedMode chooseMode() {
   if (overrideUntilMs && (int32_t)(millis() - overrideUntilMs) < 0) return override_;
   if (booting)                                      return LED_BOOT;
+  if (g_state.fallStage != FALL_NONE)               return LED_ALERT;
   if (g_state.awayFromHome || g_state.wanderFlag)   return LED_ALERT;
   if (g_state.pendingPrompt >= 0)                   return LED_PROMPT;
   if (!g_state.worn)                                return LED_OFFBODY;
   if (g_state.activity == SLEEPING)                 return LED_NIGHT;
+  if (g_state.tasksTotal > 0)                       return LED_PROGRESS;
   return LED_IDLE;
 }
 
@@ -89,6 +103,21 @@ static void render(LedMode m) {
     case LED_NIGHT:
       fill(60, 25, 0, 0.25f);
       break;
+    case LED_PROGRESS: {
+      // One pixel per task. A finished day breathes green instead of sitting
+      // flat, so "all done" is unmistakable from across the room.
+      uint8_t lit = ledsProgressPixels(g_state.tasksDone, g_state.tasksTotal);
+      if (lit >= LED_COUNT) {
+        fill(0, 255, 60, 0.35f + 0.45f * wave(3000));
+        break;
+      }
+      ring.clear();
+      for (uint8_t i = 0; i < LED_COUNT; i++) {
+        if (i < lit) ring.setPixelColor(i, ring.Color(0, 200, 50));
+        else         ring.setPixelColor(i, ring.Color(LED_PROGRESS_MIN_V, LED_PROGRESS_MIN_V / 2, 0));
+      }
+      break;
+    }
     default:
       fill(0, 120, 110, 0.15f + 0.35f * wave(4000));
       break;

@@ -8,6 +8,10 @@
     "wanderFlag": false,
     "awayFromHome": false,
     "pendingPrompt": null,
+    "tasksDone": 1,
+    "tasksTotal": 3,
+    "fallStage": "none",
+    "messageWaiting": false,
     "gps": {
       "fix": true,
       "sats": 9,
@@ -23,6 +27,10 @@
     { "id": 44, "ts": 1758291000, "type": "wear_off", "detail": "" },
     { "id": 45, "ts": 1758291300, "type": "room_change", "detail": "bedroom" },
     { "id": 46, "ts": 1758291900, "type": "geofence_exit", "detail": "210m" },
-    { "id": 47, "ts": 1758292500, "type": "geofence_return", "detail": "14m" }
+    { "id": 47, "ts": 1758292500, "type": "geofence_return", "detail": "14m" },
+    { "id": 48, "ts": 1758292800, "type": "message_received", "detail": "" },
+    { "id": 49, "ts": 1758292840, "type": "message_read", "detail": "" },
+    { "id": 50, "ts": 1758293400, "type": "fall_detected", "detail": "" },
+    { "id": 51, "ts": 1758293418, "type": "fall_cancelled", "detail": "confirming" }
   ]
 }

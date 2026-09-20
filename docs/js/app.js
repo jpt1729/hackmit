@@ -8,6 +8,9 @@ import { setupProgress, recordProgressEvent, renderProgress, resetReplayProgress
 import { setupCaregiverContact } from "./contact.js";
 import { setupRoutineEditor } from "./routine-editor.js";
 import { setupLocationMap } from "./location-map.js";
+import { renderRing } from "./ring.js";
+import { setupFall, renderFall } from "./fall.js";
+import { setupWatchMessage } from "./watch-message.js";
 
 const timelineRoot = document.getElementById("timeline");
 const alertsRoot = document.getElementById("alerts");
@@ -15,6 +18,7 @@ const modeBanner = document.getElementById("mode-banner");
 const modeDescription = document.getElementById("mode-description");
 const sessionDate = document.getElementById("session-date");
 const connectionNotice = document.getElementById("connection-notice");
+const ringRoot = document.getElementById("routine-ring");
 const announcement = document.getElementById("routine-announcement");
 const eventLog = [];
 let mode = "";
@@ -26,6 +30,8 @@ function renderRoutine() {
 
 setupMessages();
 setupProgress();
+setupFall(document.getElementById("fall-banner"));
+setupWatchMessage(document.getElementById("watch-message-form"));
 setupCaregiverContact();
 setupLocationMap();
 setupRoutineEditor();
@@ -85,13 +91,16 @@ registerStateListener((state) => {
     applyChecklistEvent({ type: "prompt_fired", detail: state.pendingPrompt });
   }
   renderRoutine();
+  renderRing(ringRoot, currentState);
+  renderFall(currentState);
   renderProgress(currentState.ts, mode);
   updateDate();
 });
 
 registerEventListener((event) => {
   recordProgressEvent(event, mode);
-  if (["wander", "wear_off", "prompt_missed"].includes(event.type)) {
+  if (["wander", "wear_off", "prompt_missed",
+       "fall_detected", "fall_alert", "fall_ems", "fall_cancelled"].includes(event.type)) {
     eventLog.unshift(event);
     if (eventLog.length > 50) eventLog.pop();
   }
@@ -102,12 +111,22 @@ registerEventListener((event) => {
     if (event.type === "room_change") currentState.room = event.detail;
     if (event.type === "wear_on") currentState.worn = true;
     if (event.type === "wear_off") currentState.worn = false;
+    if (event.type === "fall_detected") currentState.fallStage = "confirming";
+    if (event.type === "fall_alert") currentState.fallStage = "caregiver";
+    if (event.type === "fall_ems") currentState.fallStage = "ems";
+    if (event.type === "fall_cancelled") currentState.fallStage = "none";
+    if (event.type === "prompt_acked") {
+      currentState.tasksDone = Math.min((Number(currentState.tasksDone) || 0) + 1,
+                                        Number(currentState.tasksTotal) || 0);
+    }
     setTimelineState(currentState);
   }
   applyChecklistEvent(event);
   addTimelineEvent(event);
   renderAlerts(alertsRoot, eventLog);
   renderRoutine();
+  renderRing(ringRoot, currentState);
+  renderFall(currentState);
   renderProgress(currentState?.ts, mode);
   updateDate();
   renderTimeline(timelineRoot);
@@ -120,6 +139,7 @@ registerEventListener((event) => {
 });
 
 renderRoutine();
+renderRing(ringRoot, null);
 renderProgress(null, mode);
 renderTimeline(timelineRoot);
 renderAlerts(alertsRoot, eventLog);

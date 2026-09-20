@@ -30,6 +30,8 @@
     </header>
 
     <main id="main" class="shell" tabindex="-1">
+      <section id="fall-banner" class="fall-banner" aria-live="assertive" hidden></section>
+
       <div class="page-heading">
         <div><p id="session-date" class="date-line"></p></div>
         <div id="caregiver-shortcut" class="caregiver-shortcut"><a id="caregiver-call" class="button button-primary" hidden>Call caregiver</a><button id="caregiver-setup-link" class="button button-secondary" type="button">Add caregiver contact</button></div>
@@ -101,6 +103,12 @@
           <div class="location-details"><p id="location-wear">Wrist status unavailable.</p><p id="location-room"></p><p id="location-confidence" hidden></p><p id="location-updated">Waiting for a location report.</p></div>
         </section>
 
+        <section class="panel ring-panel" aria-labelledby="ring-title">
+          <div class="section-heading"><div><p class="section-label">On the wristband</p><h2 id="ring-title">Light ring</h2></div></div>
+          <p class="ring-help">The ring on the wristband lights one pixel per reminder. This is what it looks like right now.</p>
+          <div id="routine-ring" aria-live="polite"></div>
+        </section>
+
         <section class="panel clock-panel" aria-labelledby="clock-title">
           <div class="section-heading"><div><p class="section-label">At a glance</p><h2 id="clock-title">Your routine</h2></div><span id="clock-activity-count" class="small-badge"></span></div>
           <div class="view-tabs" role="tablist" aria-label="Routine views">
@@ -154,6 +162,18 @@
           </section>
           <section aria-labelledby="alerts-title"><h2 id="alerts-title">Notices</h2><div id="alerts"></div></section>
           <section aria-labelledby="timeline-title"><h2 id="timeline-title">Device and recent activity</h2><div id="timeline"></div></section>
+          <section aria-labelledby="watch-message-title">
+            <h2 id="watch-message-title">Send a note to the screen</h2>
+            <p class="contact-help">A short line of text appears on the wristband screen and stays there until they shake it away.</p>
+            <form id="watch-message-form" class="caregiver-form">
+              <label for="watch-message-text">Note</label>
+              <input id="watch-message-text" type="text" maxlength="96" placeholder="e.g. Lunch is in the fridge" autocomplete="off" />
+              <p id="watch-message-count" class="message-count" aria-hidden="true">0/96</p>
+              <button id="watch-message-send" class="button button-primary" type="submit">Send to wristband</button>
+            </form>
+            <p id="watch-message-status" class="messages-status" role="status"></p>
+          </section>
+
           <section aria-labelledby="contact-settings-title"><h2 id="contact-settings-title">Caregiver contact</h2><p class="contact-help">Add a trusted person’s number for the Call caregiver shortcut. It is saved in this browser.</p><form id="caregiver-form" class="caregiver-form"><label for="caregiver-name">Name</label><input id="caregiver-name" type="text" maxlength="60" autocomplete="name" placeholder="Caregiver name" required /><label for="caregiver-phone">Phone number</label><input id="caregiver-phone" type="tel" maxlength="35" autocomplete="tel" placeholder="Phone number" required /><button class="button button-primary" type="submit">Save contact</button></form><p id="caregiver-save-status" role="status"></p></section>
         </div>
       </div>

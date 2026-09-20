@@ -8,6 +8,7 @@ let replayTimer = null;
 let replayPaused = false;
 let replayEvents = [];
 let replayIndex = 0;
+let host = "";
 
 function replayStatus(complete = false) {
   document.dispatchEvent(new CustomEvent("replay-status", { detail: { paused: replayPaused, complete } }));
@@ -84,6 +85,22 @@ async function pollLiveMode(deviceHost) {
   }
 }
 
+function deviceHost() { return host; }
+
+// Controls that act on the wristband: clearing a fall, sending a note to the
+// OLED. Replay has no device behind it, so these are a no-op there and the
+// caller keeps its button disabled.
+async function postDevice(path, params = {}) {
+  if (!host) throw new Error("no device connected");
+  const query = new URLSearchParams(params).toString();
+  const response = await fetch(`http://${host}${path}${query ? `?${query}` : ""}`, {
+    method: "POST",
+    cache: "no-store"
+  });
+  if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+  return response.json();
+}
+
 function bootApi() {
   const deviceHost = new URLSearchParams(window.location.search).get("device");
   if (!deviceHost) return startReplayMode();
@@ -91,9 +108,10 @@ function bootApi() {
     setMode("unavailable");
     return;
   }
+  host = deviceHost;
   setMode("connecting", deviceHost);
   pollLiveMode(deviceHost);
   window.setInterval(() => pollLiveMode(deviceHost), 3000);
 }
 
-export { bootApi, registerStateListener, registerEventListener, toggleReplay };
+export { bootApi, registerStateListener, registerEventListener, toggleReplay, deviceHost, postDevice };

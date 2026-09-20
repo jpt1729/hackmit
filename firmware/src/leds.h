@@ -9,8 +9,13 @@ enum LedMode : uint8_t {
   LED_ACK,      // green wash, fades out
   LED_OFFBODY,  // dim blue dot: device is not being worn
   LED_NIGHT,    // very dim warm glow: asleep, doubles as a night light
+  LED_PROGRESS, // routine so far: one pixel per task, green as they are done
   LED_IDLE,     // slow teal breathe: worn, awake, nothing due
 };
+
+// How many pixels the ring lights for the day's progress. Exposed so the
+// dashboard ring and the native tests agree with the firmware on the rounding.
+uint8_t ledsProgressPixels(uint8_t done, uint8_t total);
 
 void    ledsInit();
 void    ledsTick();
