@@ -65,7 +65,13 @@ button { cursor: pointer; }
 #caregiver-latest-message audio { max-width: 100%; }
 .brain-mascot { display: block; width: clamp(100px, 20vw, 175px); height: auto; flex-shrink: 0; }
 .mascot-shadow { fill: #513e54; opacity: 0.12; }
-.demo-view-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.8rem; margin-bottom: 1.4rem; padding: 0.8rem 1rem; border: 1px solid var(--subtle-border); border-radius: 14px; background: var(--panel); }
+.mascot-body { animation: buddy-bob 4s ease-in-out infinite; }
+.mascot-eye { transform-box: fill-box; transform-origin: center; animation: buddy-blink 6s ease-in-out infinite; }
+.mascot-wave { transform-origin: 190px 111px; animation: buddy-wave 5s ease-in-out infinite; }
+@keyframes buddy-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+@keyframes buddy-blink { 0%, 43%, 49%, 100% { transform: scaleY(1); } 46% { transform: scaleY(0.1); } }
+@keyframes buddy-wave { 0%, 12%, 28%, 100% { transform: rotate(0deg); } 16%, 24% { transform: rotate(-14deg); } 20% { transform: rotate(8deg); } }
+.demo-view-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.8rem; max-width: 1120px; margin: 0 auto; padding: 0.8rem 1.5rem; border-bottom: 1px solid var(--subtle-border); background: var(--panel); }
 .demo-view-bar p { color: var(--muted); font-size: 0.9em; }
 .demo-view-toggle { display: flex; gap: 0.4rem; }
 .demo-view-toggle .button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
@@ -166,14 +172,9 @@ button { cursor: pointer; }
 #message-preview[hidden] { display: none; }
 .message-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 .caregiver-panel { margin-top: 1.4rem; border: 1px solid var(--subtle-border); border-radius: 16px; background: var(--panel); }
-.caregiver-panel summary { padding: 1.1rem 1.5rem; cursor: pointer; min-height: 60px; }
-.caregiver-panel summary::marker { color: var(--accent); }
-.summary-title { font-weight: 600; }
-.summary-description { display: block; color: var(--muted); font-size: 0.9em; margin-top: 0.2rem; }
 .caregiver-content { padding: 0 1.5rem 1.5rem; }
 .caregiver-content section { border-top: 1px solid var(--subtle-border); padding-top: 1.3rem; margin-top: 0.8rem; }
-.location-source { border-radius: 8px; padding: 0.35rem 0.65rem; color: var(--accent); background: var(--soft); font-size: 0.85em; font-weight: 700; }
-.location-source[data-state="notice"] { color: var(--warn-ink); background: var(--warn-bg); }
+.caregiver-content section:first-child { border-top: 0; margin-top: 0; }
 .location-status { font-weight: 700; margin: 0.75rem 0; }
 .location-map { margin: 0; }
 .location-map-frame { position: relative; isolation: isolate; overflow: hidden; border: 1px solid var(--border); border-radius: 16px; }
@@ -181,8 +182,6 @@ button { cursor: pointer; }
 #bracelet-map .leaflet-control-zoom a { width: 44px; height: 44px; line-height: 44px; color: var(--ink); }
 #bracelet-map .leaflet-control-attribution { max-width: 100%; font-size: 11px; background: #fffffff0; }
 #bracelet-map .leaflet-tooltip { font: 700 0.85rem/1.4 Verdana, sans-serif; color: var(--ink); padding: 0.45rem 0.7rem; white-space: normal; min-width: 8rem; text-align: center; }
-.location-map-badge { position: absolute; top: 12px; right: 12px; z-index: 800; max-width: calc(100% - 90px); background: var(--panel); color: var(--ink); border: 1px solid var(--border); border-radius: 9px; padding: 0.45rem 0.65rem; font-size: 0.8em; font-weight: 700; pointer-events: none; box-shadow: 0 2px 8px #192b3420; }
-.location-map-badge[data-state="notice"] { background: var(--warn-bg); color: var(--warn-ink); }
 .location-map-actions { display: flex; flex-wrap: wrap; gap: 0.65rem; margin-top: 0.85rem; }
 .location-map-actions a { text-decoration: none; }
 .location-map-error { padding: 0.6rem; margin-top: 0.6rem; background: var(--warn-bg); color: var(--warn-ink); border-radius: 8px; }
@@ -233,7 +232,6 @@ button { cursor: pointer; }
   .clock-event { width: 46px; height: 46px; }
   .caregiver-form { grid-template-columns: 1fr; }
   .caregiver-form button { grid-column: 1; }
-  .caregiver-panel summary { padding: 1rem; }
   .caregiver-content { padding: 0 1rem 1rem; }
 }
 @media (max-width: 360px) {
@@ -244,3 +242,19 @@ button { cursor: pointer; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
+
+.clock-scroll { overflow-x: auto; padding: 0.4rem 0.2rem; }
+.clock-help { margin-top: 0.6rem; color: var(--muted); font-size: 0.85em; }
+.clock-extra-ring { fill: none; stroke: var(--subtle-border); stroke-width: 2; stroke-dasharray: 5 5; }
+.routine-form { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1.4fr); gap: 0.8rem; align-items: end; }
+.routine-form label { display: block; font-weight: 700; margin-bottom: 0.3rem; }
+.routine-form input, .routine-form select { width: 100%; min-width: 0; min-height: 48px; padding: 0.6rem; font: inherit; color: var(--ink); background: var(--panel); border: 1px solid var(--border); border-radius: 9px; }
+.routine-form > button { justify-self: start; }
+.routine-editor-list { list-style: none; margin: 1rem 0 0; padding: 0; }
+.routine-editor-list li { display: flex; align-items: center; gap: 0.75rem; padding: 0.7rem 0; border-bottom: 1px solid var(--subtle-border); }
+.routine-editor-list li > div { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.routine-editor-list li > div > span { display: block; color: var(--muted); font-size: 0.85em; }
+.routine-editor-icon { display: grid; place-items: center; width: 44px; height: 44px; flex-shrink: 0; color: var(--accent); background: var(--soft); border-radius: 50%; }
+.routine-editor-icon svg { width: 27px; height: 27px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.routine-remove { color: var(--missed-bg); background: var(--panel); font-size: 0.85em; flex-shrink: 0; }
+@media (max-width: 600px) { .routine-form { grid-template-columns: minmax(0, 1fr); } }

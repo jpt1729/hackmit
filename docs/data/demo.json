@@ -2,7 +2,6 @@
   "state": {
     "ts": 1758290400,
     "activity": "moving",
-    "gps": { "latitude": 42.3601, "longitude": -71.0942, "accuracy": 25, "ts": 1758290400, "demo": true },
     "room": "kitchen",
     "roomConfidence": 82,
     "worn": true,

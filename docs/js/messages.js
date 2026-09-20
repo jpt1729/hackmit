@@ -163,9 +163,10 @@ function setRole(role, initial = false) {
   roleLabel.textContent = `${isPatient ? "Patient" : "Caregiver"} view · Send to ${recipient}`;
   composeTitle.textContent = `Message ${recipient}`;
   brainBuddy.hidden = !isPatient;
+  document.getElementById("caregiver-shortcut").hidden = !isPatient;
   caregiverHistory.hidden = isPatient;
   caregiverPanel.hidden = isPatient;
-  caregiverPanel.open = !isPatient;
+  document.querySelector(".location-section").hidden = isPatient;
   messageList.querySelectorAll("audio").forEach((audio) => audio.pause());
   latestMessage.querySelectorAll("audio").forEach((audio) => audio.pause());
   messageList.replaceChildren();
