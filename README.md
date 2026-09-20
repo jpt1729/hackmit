@@ -1,6 +1,38 @@
-# Routine Anchor — Build Spec
+# Granny Nanny — Build Spec
 
-ESP32 wearable for people with dementia/TBI. Gentle haptic prompts tied to time + room-level location, with a caregiver dashboard. Local-first: data never leaves the home network. ~$15 of parts.
+Granny Nanny's brain mascot is named **Brain Buddy**.
+
+In Patient view, Brain Buddy sits below the demo toggle and shows the caregiver’s latest voice message and transcription. The patient’s recording area comes next, followed by today’s routine clock and weekly progress. Brain Buddy is hidden in Caregiver view, which retains the full recent message history.
+
+The clock displays 12 sample activities from 8 AM through 7 PM, with AM/PM labels on each symbol. These are dashboard schedule entries; actual bracelet prompts are configured separately in the firmware. Received and missed states update when matching prompt events arrive.
+
+In **Caregiver** view, **For caregivers** shows an interactive street map with pan/zoom, a bracelet marker, GPS accuracy circle, recenter control, and a link to open the coordinates in Google Maps. The map uses locally bundled [Leaflet 1.9.4](https://leafletjs.com/) with [OpenStreetMap](https://www.openstreetmap.org/copyright) street tiles. No map API key is needed. Street tiles require internet access; they use normal browser caching and are not downloaded for offline use. Location details remain readable if tiles fail. Tiles only load when the caregiver map is visible.
+
+**GPS is a frontend integration, not yet provided by the firmware.** The replay fixture includes explicitly simulated coordinates near MIT for demonstrating the map. Room estimates cannot determine a street position, and the site never uses the browser’s own location as the bracelet’s. Missing or invalid coordinates show no marker; old GPS timestamps are labeled as last reported. Off-wrist status refers to the bracelet rather than the person.
+
+To connect real GPS, add this object to the bracelet’s `/state` response (example values only):
+
+```json
+"gps": { "latitude": 42.3601, "longitude": -71.0942, "accuracy": 25, "ts": 1758290400 }
+```
+
+`latitude` and `longitude` are numeric degrees; `accuracy` is an optional radius in meters. `ts` is the GPS fix’s Unix timestamp in seconds (the state’s `ts` is the fallback). Send `gps: null` or `valid: false` inside `gps` when there is no fix. Do not refresh the fix timestamp unless GPS supplies a new measurement. The demo fixture’s `demo: true` flag is rejected in live mode. Existing `room`, `worn`, and room/wrist events still update the text below the map.
+
+## Voice messages
+
+Run the local message server with Python 3. Use the **Patient / Caregiver** buttons near the top of the page to switch demo views. One patient and one caregiver are created automatically; there is no account setup, password, PIN, or sign in. Record a voice message, preview it, and send it, then switch views to hear it as the recipient. Caregiver view also shows contact settings, notices, and device activity. Unsent recording previews are kept for each role during the page visit; switching while recording stops that unfinished recording. Each tab remembers its own selected view, so two tabs can demonstrate a conversation.
+
+New microphone recordings include speech to text when the browser supports the Web Speech API. The browser's speech service may process audio online; the recording form explains this and provides an audio-only option. Review and edit the words before sending. Audio and the edited transcript are saved together in SQLite and shown in both views. Existing databases are upgraded automatically. Browsers without speech recognition support provide a field for typing the words after recording. Voice messages are recorded with the microphone; file uploads are not offered. Speech recognition can fail or miss words, so the original recording stays available. See [browser speech recognition support](https://developer.mozilla.org/en-US/docs/Web/API/SpeechRecognition).
+
+```sh
+python3 tools/message_server.py
+```
+
+Open `http://127.0.0.1:8787/`. For a live wristband, append `?device=ESP32_IP`. Participants, recordings, and transcripts are stored in the local SQLite file `var/voice_messages.sqlite3`; previous recordings are preserved. This is a demo without authentication: anyone who can access the server can view and send messages as either role. The database is ignored by Git. To use separate devices, host this server on a trusted HTTPS connection using `VOICE_HOST`, `VOICE_TLS_CERT`, and `VOICE_TLS_KEY`; browsers require a secure context for microphone recording. The static page still shows the routine but cannot send or receive messages without the server.
+
+The page follows the browser's default text size. Clock symbols show reminder status with colors and accessible labels; there is no separate morning routine reminder box or text-size control. The clock has a **Weekly progress** tab with seven vertical stacked bars (purple for received, red for missed, amber for unconfirmed) on a shared count axis. It summarizes only `prompt_fired`, `prompt_acked`, and `prompt_missed` events the browser has observed. Live history is stored in that browser for up to 45 days; replay history is kept separate and resets when replay starts. A blank day means there is no recorded data, not that the person missed every task. A caregiver can add or change a trusted name and phone number in **For caregivers**; the page then shows a one-tap call link near the top. The contact is stored in that browser only.
+
+ESP32 wearable for people with dementia/TBI. Gentle haptic prompts tied to time + room-level location, with a caregiver dashboard and local voice messaging. ~$15 of parts for the original wearable prototype, excluding the message server.
 
 ---
 
@@ -49,7 +81,7 @@ This split is a feature, not a hack — it's literally the "local, no cloud" pit
 ## 2. Repo layout
 
 ```
-routine-anchor/
+granny-nanny/
 ├── README.md                  # pitch summary, wiring photo, quickstart, link to Pages
 ├── docs/                      # ← GitHub Pages root (Settings → Pages → main /docs)
 │   ├── index.html

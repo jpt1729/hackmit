@@ -6,6 +6,9 @@
 #define NTP_SERVER    "pool.ntp.org"
 #define TZ_OFFSET_SEC (-4 * 3600)
 
+// Placeholder config for the Granny Nanny build spec.
+#define WIFI_SSID "your_wifi"
+#define WIFI_PASSWORD "your_password"
 #ifndef ENABLE_WEAR
 #define ENABLE_WEAR 1
 #endif
