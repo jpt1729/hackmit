@@ -79,7 +79,8 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_header("Cache-Control", "no-store")
         self.send_header("Content-Length", str(len(payload)))
         self.end_headers()
-        self.wfile.write(payload)
+        if self.command != "HEAD":
+            self.wfile.write(payload)
 
     def read_json(self):
         try:
@@ -152,17 +153,46 @@ class Handler(SimpleHTTPRequestHandler):
             if not row or not row["audio"]:
                 self.json_response(404, {"error": "Message not found"})
                 return
-            self.send_response(200)
+            data = row["audio"]
+            size = len(data)
+            start, end = 0, size - 1
+            # Embedded media players may request a probe or seek using byte ranges.
+            requested = re.fullmatch(r"bytes=(\d*)-(\d*)", self.headers.get("Range", ""))
+            partial = requested is not None and any(requested.groups())
+            if partial:
+                first, last = requested.groups()
+                if first:
+                    start = int(first)
+                    end = min(int(last), size - 1) if last else size - 1
+                else:
+                    start = max(0, size - int(last))
+                if start >= size or end < start:
+                    self.send_response(416)
+                    self.send_header("Content-Range", f"bytes */{size}")
+                    self.send_header("Content-Length", "0")
+                    self.end_headers()
+                    return
+            self.send_response(206 if partial else 200)
             self.send_header("Content-Type", row["mime_type"])
             self.send_header("Cache-Control", "private, no-store")
-            self.send_header("Content-Length", str(len(row["audio"])))
+            self.send_header("Accept-Ranges", "bytes")
+            if partial:
+                self.send_header("Content-Range", f"bytes {start}-{end}/{size}")
+            self.send_header("Content-Length", str(end - start + 1))
             self.end_headers()
-            self.wfile.write(row["audio"])
+            if self.command != "HEAD":
+                self.wfile.write(data[start:end + 1])
             return
         if path.startswith("/api/"):
             self.json_response(404, {"error": "Not found"})
             return
         super().do_GET()
+
+    def do_HEAD(self):
+        if re.fullmatch(r"/api/voice/messages/\d+/audio", urlparse(self.path).path):
+            self.do_GET()
+        else:
+            super().do_HEAD()
 
     def do_POST(self):
         path = urlparse(self.path).path

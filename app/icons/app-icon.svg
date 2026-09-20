@@ -1,4 +1,15 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
-  <rect width="192" height="192" rx="42" fill="#17324d"/>
-  <path d="M52 96h26l12-36 18 72 12-36h20" fill="none" stroke="#f7c873" stroke-linecap="round" stroke-linejoin="round" stroke-width="14"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 240 240">
+  <title>Brain Buddy mascot</title>
+  <rect width="240" height="240" fill="#aad3df"/>
+  <g transform="translate(0 12)">
+    <ellipse cx="122" cy="184" rx="58" ry="7" fill="#513e54" opacity=".12"/>
+    <g>
+    <g fill="none" stroke="#513e54" stroke-width="7" stroke-linecap="round"><path d="m85 153-7 26h-11m85-26 9 26h12"/><path stroke="#513e54" d="M50 111C31 114 21 107 13 96"/><path stroke="#513e54" d="M190 111C209 114 219 107 227 96"/></g>
+    <path d="M120 35c-14-15-35-10-43 4-17-3-34 12-31 30-16 10-19 32-7 46-5 18 8 37 25 38 11 21 37 22 56 9 19 13 45 12 56-9 17-1 30-20 25-38 12-14 9-36-7-46 3-18-14-33-31-30-8-14-29-19-43-4Z" fill="#f0bfc6" stroke="#513e54" stroke-width="3.5"/>
+    <path d="M120 37v48m0 58v17M78 42c-8 12-1 24 11 27m-40 2c13-4 23 6 23 17m-30 26c8-10 20-10 28-3m-4 43c-5-13 1-23 12-26m84-86c8 12 1 24-11 27m40 2c-13-4-23 6-23 17m30 26c-8-10-20-10-28-3m4 43c5-13-1-23-12-26M92 81c-1-10 5-16 13-16m43 16c1-10-5-16-13-16" fill="none" stroke="#ca899d" stroke-width="4" stroke-linecap="round"/>
+    <ellipse cx="92" cy="112" rx="5" ry="7" fill="#3b3049"/><ellipse cx="148" cy="112" rx="5" ry="7" fill="#3b3049"/>
+    <circle cx="79" cy="125" r="8" fill="#e79cac" opacity=".75"/><circle cx="161" cy="125" r="8" fill="#e79cac" opacity=".75"/>
+    <path d="M108 130q12 14 24 0" fill="none" stroke="#3b3049" stroke-width="4" stroke-linecap="round"/>
+    </g>
+  </g>
 </svg>

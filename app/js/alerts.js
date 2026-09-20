@@ -122,7 +122,7 @@ function renderAlerts(container, events = [], state = null, online = false) {
   if (!list.children.length) {
     const item = document.createElement("li");
     item.className = "alert-item ok";
-    item.textContent = "No notices have been received.";
+    item.textContent = "No updates have been received.";
     list.append(item);
   }
   container.replaceChildren(list);
