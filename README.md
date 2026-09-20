@@ -48,16 +48,52 @@ cd firmware && pio run -t upload && pio device monitor   # the band prints its I
 ```
 
 To show the band itself with no WiFi, no sensors and nothing to set up, there is a
-showcase build that walks the ring and the OLED through every state — reminder,
-acknowledgement, message, geofence, night wander, off-wrist, and the fall ladder —
-on a loop, narrating each scene over the monitor:
+showcase build:
 
 ```sh
 cd firmware && pio run -e esp32dev_demo -t upload && pio device monitor
 ```
 
-It drives the real `g_state` and calls the shipping `ledsTick()`/`displayTick()`,
-so what it shows is what the band does; `-DDEMO_BUZZER=0` runs it silent.
+It drives the real `g_state` and calls the shipping `ledsTick()`/`displayTick()`, and
+where the firmware already has an entry point — `promptsDemoFire()`, `promptsAckPending()` —
+it calls that rather than setting state by hand. The geofence scene feeds synthetic NMEA
+into `gpsFeed()`, so the distance, the compass bearing and the three-fix debounce are all
+computed by `gps.cpp`. Nothing in `demo.cpp` re-implements an animation or a screen: what
+it shows is what the band does.
+
+It boots into a **table loop** — five beats, 46 seconds, sized for someone who walks up,
+watches, and leaves:
+
+| Beat | Ring | Screen |
+| --- | --- | --- |
+| 9am reminder | amber comet | "Meds are in the kitchen / Shake to confirm" |
+| Shaken to confirm | green wash | "Done!" |
+| No answer | amber, re-chime, then progress | "Not acknowledged" |
+| Outside the fence | red pulse | "home 140m SE" |
+| Back home | 2 of 3 done | clock and mascot |
+
+That is the whole argument in order: a reminder arrives, the person answers it, a later
+one goes unanswered and is reported honestly, the person leaves the house and the band
+points *them* home before it tells anyone, the day resumes.
+
+Press `t` in the monitor for the **full tour** — all 15 scenes, ~97 seconds, adding the
+caregiver message, night wandering, off-wrist, the night light and the three stages of
+the fall ladder. `-DDEMO_FULL_TOUR=1` boots straight into it.
+
+Driving it by hand, to hold a beat while you talk over it:
+
+| | |
+| --- | --- |
+| BOOT button (GPIO 0) | tap = next beat, hold = pause, hold 3 s = swap loop |
+| Serial | any key = next, `p` = pause, `t` = swap loop |
+
+GPIO 0 is also the auto-reset circuit's IO0 line, so an attached serial adapter can hold
+it low. The button arms only once it has been seen released, which means it does nothing
+while a monitor is open — use the serial keys there instead.
+
+`-DDEMO_BUZZER=0` runs it silent. The env also passes `-DLED_BRIGHTNESS=12`: a judging
+table is closer than a bedside, and `LED_BRIGHTNESS` is `#ifndef`-guarded in `config.h`
+so a build can go dimmer without moving the shipped default of 40.
 
 Two things are measurements rather than settings and have to be retaken in a new building:
 
@@ -72,7 +108,7 @@ Venue WiFi often has client isolation, which stops the laptop and the band from 
 
 ```sh
 python3 tools/contract.py          # the JSON contract, no device needed
-cd firmware && pio test -e native  # 132 logic tests on your laptop, ~6 s
+cd firmware && pio test -e native  # 165 logic tests on your laptop, ~10 s
 pio run                            # all five build configurations compile
 ```
 

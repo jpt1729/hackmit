@@ -75,6 +75,7 @@
 #define FALL_CHIME_MS       8000     // re-chime cadence while a fall is unresolved
 
 // ---------------------------------------------------------------- caregiver messages (OLED)
+#define SPLASH_MS           2500     // boot screen: mascot + name, before the clock
 #define MSG_MAX_LEN         96       // longer messages are truncated on the wrist
 #define MSG_TTL_MS          600000   // unread this long: stop holding the screen
 
@@ -99,7 +100,12 @@
 
 // ---------------------------------------------------------------- LED ring (NeoPixel)
 #define LED_COUNT          12
-#define LED_BRIGHTNESS     40      // 0-255. Dim on purpose: it is a night-time device.
+// 0-255. Dim on purpose: it is a night-time device. Overridable with -D so a
+// build can go dimmer still without editing the shipped default (the demo
+// build does exactly that - a judging table is closer than a bedside).
+#ifndef LED_BRIGHTNESS
+#define LED_BRIGHTNESS     40
+#endif
 #define LED_FRAME_MS       40      // 25 fps animation tick
 #define LED_ACK_FLASH_MS   3000
 #define LED_PROGRESS_MIN_V 12      // unfinished pixels glow this dim, so 0/N still reads as a ring

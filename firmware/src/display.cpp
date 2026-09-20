@@ -18,6 +18,7 @@ static uint32_t    flashUntilMs = 0;
 static uint32_t    lastCheckMs = 0;
 static char        footer[24] = "";
 static char        shownKey[96] = "";
+static uint32_t    splashUntilMs = 0;
 
 static void printWrapped(const char* text, size_t cols) {
   // Must hold the longest thing we ever wrap, which is a caregiver message.
@@ -36,6 +37,18 @@ static void printWrapped(const char* text, size_t cols) {
     oled.print(word);
     used += len;
   }
+}
+
+// Boot screen: the mascot and the device's name, laid out the way the idle
+// screen lays out the mascot and the clock.
+static void drawSplash() {
+  oled.drawBitmap(2, 15, BRAINBUDDY_BMP, BRAINBUDDY_BMP_W, BRAINBUDDY_BMP_H,
+                  SSD1306_WHITE);
+  oled.setTextSize(2);
+  oled.setCursor(58, 20);
+  oled.print("Brain");
+  oled.setCursor(58, 38);
+  oled.print("Buddy");
 }
 
 static void drawCentered(const char* text, uint8_t size, int16_t y) {
@@ -64,6 +77,7 @@ void displayInit() {
   lastCheckMs = 0;
   shownKey[0] = 0;
   footer[0] = 0;
+  splashUntilMs = 0;
 
   Wire.begin(PIN_SDA, PIN_SCL);
   ok = oled.begin(SSD1306_SWITCHCAPVCC, OLED_ADDR, true, false);
@@ -73,9 +87,12 @@ void displayInit() {
   }
   oled.setTextColor(SSD1306_WHITE);
   oled.clearDisplay();
-  drawCentered("Starting", 2, 24);
+  drawSplash();
   oled.display();
+  splashUntilMs = millis() + SPLASH_MS;
 }
+
+void displaySplash(uint32_t ms) { splashUntilMs = millis() + ms; }
 
 void displayFlash(const char* text, uint32_t ms) {
   flashText = text;
@@ -103,16 +120,20 @@ void displayTick() {
   char status[24];
   statusLine(status, sizeof(status));
 
+  bool splashing = splashUntilMs && (int32_t)(now - splashUntilMs) < 0;
+
   // Full redraws cost ~25 ms of I2C, so only redraw when the content changes.
   bool msg = messagePending() && g_state.fallStage == FALL_NONE && p < 0;
   char key[192];
-  snprintf(key, sizeof(key), "%d|%u|%d|%s|%s|%s|%s", p, (unsigned)g_state.fallStage,
-           msg ? 1 : 0, flashing ? flashText : "", clock, status, footer);
+  snprintf(key, sizeof(key), "%d|%u|%d|%d|%s|%s|%s|%s", p, (unsigned)g_state.fallStage,
+           msg ? 1 : 0, splashing ? 1 : 0, flashing ? flashText : "", clock, status, footer);
   if (strcmp(key, shownKey) == 0) return;
   strlcpy(shownKey, key, sizeof(shownKey));
 
   oled.clearDisplay();
-  if (g_state.fallStage != FALL_NONE) {
+  if (splashing) {
+    drawSplash();
+  } else if (g_state.fallStage != FALL_NONE) {
     // A fall owns the whole screen. The wearer may be on the floor and looking
     // at it sideways, so it is the largest, shortest text the panel can show.
     const char* head = g_state.fallStage == FALL_CONFIRMING ? "Are you OK?"
@@ -164,5 +185,6 @@ void displayInit() {}
 void displayTick() {}
 void displayFlash(const char*, uint32_t) {}
 void displayFooter(const char*) {}
+void displaySplash(uint32_t) {}
 
 #endif
