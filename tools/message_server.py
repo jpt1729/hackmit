@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Local patient/caregiver demo voice message server for Granny Nanny. No packages required."""
+"""Local patient/caregiver demo voice message server for Brain Buddy. No packages required."""
 
 import base64
 import binascii
@@ -12,11 +12,11 @@ import re
 import sqlite3
 import ssl
 import time
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 
 ROOT = Path(__file__).resolve().parent.parent
-DOCS = ROOT / "docs"
+APP_ROOT = ROOT / "app"
 DB_PATH = Path(os.environ.get("VOICE_DB_PATH", ROOT / "var" / "voice_messages.sqlite3"))
 MAX_BODY = 6_000_000
 MAX_AUDIO = 4_000_000
@@ -65,7 +65,7 @@ def initialize_database():
 
 class Handler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, directory=str(DOCS), **kwargs)
+        super().__init__(*args, directory=str(APP_ROOT), **kwargs)
 
     def end_headers(self):
         self.send_header("X-Content-Type-Options", "nosniff")
@@ -101,23 +101,45 @@ class Handler(SimpleHTTPRequestHandler):
     def do_GET(self):
         path = urlparse(self.path).path
         if path == "/api/voice/messages":
+            before = parse_qs(urlparse(self.path).query).get("before", [None])[0]
+            if before is not None:
+                try:
+                    before = int(before)
+                    if not 0 < before <= 9223372036854775807:
+                        raise ValueError
+                except ValueError:
+                    self.json_response(400, {"error": "Invalid message history position."})
+                    return
             with closing(database()) as db:
                 rows = db.execute("""
                     SELECT messages.id, messages.created_at, messages.mime_type, messages.note, messages.transcript,
+                           length(messages.audio) > 0 AS has_audio,
                            users.role AS sender_role, users.display_name AS sender_name
                     FROM messages JOIN users ON users.id = messages.sender_id
-                    ORDER BY messages.id DESC LIMIT 50
-                """).fetchall()
+                    WHERE (? IS NULL OR messages.id < ?)
+                    ORDER BY messages.id DESC LIMIT 51
+                """, (before, before)).fetchall()
                 latest = db.execute("""
                     SELECT messages.id, messages.created_at, messages.mime_type, messages.note, messages.transcript,
+                           length(messages.audio) > 0 AS has_audio,
                            users.role AS sender_role, users.display_name AS sender_name
                     FROM messages JOIN users ON users.id = messages.sender_id
                     WHERE users.role = 'caregiver'
                     ORDER BY messages.id DESC LIMIT 1
                 """).fetchone()
+                latest_patient = db.execute("""
+                    SELECT messages.id, messages.created_at, messages.mime_type, messages.note, messages.transcript,
+                           length(messages.audio) > 0 AS has_audio,
+                           users.role AS sender_role, users.display_name AS sender_name
+                    FROM messages JOIN users ON users.id = messages.sender_id
+                    WHERE users.role = 'patient'
+                    ORDER BY messages.id DESC LIMIT 1
+                """).fetchone()
             self.json_response(200, {
-                "messages": [dict(row) for row in reversed(rows)],
+                "messages": [dict(row) for row in reversed(rows[:50])],
+                "hasMore": len(rows) > 50,
                 "latestCaregiverMessage": dict(latest) if latest else None,
+                "latestPatientMessage": dict(latest_patient) if latest_patient else None,
             })
             return
         match = re.fullmatch(r"/api/voice/messages/(\d+)/audio", path)
@@ -127,7 +149,7 @@ class Handler(SimpleHTTPRequestHandler):
                     SELECT mime_type, audio FROM messages
                     WHERE id = ?
                 """, (int(match.group(1)),)).fetchone()
-            if not row:
+            if not row or not row["audio"]:
                 self.json_response(404, {"error": "Message not found"})
                 return
             self.send_response(200)
@@ -168,22 +190,29 @@ class Handler(SimpleHTTPRequestHandler):
             raise ValueError("Choose the patient or caregiver view before sending.")
         with closing(database()) as db:
             user = db.execute("SELECT id, role FROM users WHERE role = ?", (role,)).fetchone()
-        audio = body.get("audio")
-        if not isinstance(audio, dict) or not isinstance(audio.get("data"), str):
-            raise ValueError("Record an audio message first.")
-        mime_type = str(audio.get("mimeType", "")).split(";")[0].lower()
-        if mime_type not in ALLOWED_AUDIO:
-            raise ValueError("Use a WebM, MP4, OGG, WAV, or MP3 recording.")
-        try:
-            data = base64.b64decode(audio["data"], validate=True)
-        except (binascii.Error, ValueError) as exc:
-            raise ValueError("The audio recording could not be read.") from exc
-        if not 1 <= len(data) <= MAX_AUDIO:
-            raise ValueError("The audio recording must be under 4 MB.")
-        note = str(body.get("note", "")).strip()[:160]
         transcript = body.get("transcript", "")
         if not isinstance(transcript, str) or len(transcript) > 4000:
-            raise ValueError("The transcript must be text of up to 4000 characters.")
+            raise ValueError("The message must be text of up to 4000 characters.")
+        transcript = transcript.strip()
+        audio = body.get("audio")
+        if audio is None:
+            if not transcript:
+                raise ValueError("Record or type a message first.")
+            # Empty audio keeps existing databases and recordings compatible.
+            mime_type, data = "text/plain", b""
+        else:
+            if not isinstance(audio, dict) or not isinstance(audio.get("data"), str):
+                raise ValueError("The audio recording could not be read.")
+            mime_type = str(audio.get("mimeType", "")).split(";")[0].lower()
+            if mime_type not in ALLOWED_AUDIO:
+                raise ValueError("Use a WebM, MP4, OGG, WAV, or MP3 recording.")
+            try:
+                data = base64.b64decode(audio["data"], validate=True)
+            except (binascii.Error, ValueError) as exc:
+                raise ValueError("The audio recording could not be read.") from exc
+            if not 1 <= len(data) <= MAX_AUDIO:
+                raise ValueError("The audio recording must be under 4 MB.")
+        note = str(body.get("note", "")).strip()[:160]
         recipient_role = "patient" if user["role"] == "caregiver" else "caregiver"
         with closing(database()) as db, db:
             db.execute("""INSERT INTO messages (sender_id, recipient_role, created_at, mime_type, audio, note, transcript)
@@ -208,7 +237,7 @@ def main():
         context.load_cert_chain(cert, key)
         server.socket = context.wrap_socket(server.socket, server_side=True)
     protocol = "https" if cert else "http"
-    print(f"Granny Nanny message server: {protocol}://{host}:{port}/", flush=True)
+    print(f"Brain Buddy message server: {protocol}://{host}:{port}/", flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

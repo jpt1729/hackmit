@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Firmware <-> dashboard JSON contract (README §5), as executable checks.
+"""Firmware <-> dashboard JSON contract (docs/spec.md §5), as executable checks.
 
 Run with no args for the offline checks (no device needed):
     python3 tools/contract.py
-  - docs/data/demo.json matches the contract
-  - schedule ids in firmware/src/config.h match docs/js/checklist.js
+  - app/data/demo.json matches the contract
+  - schedule ids in firmware/src/config.h match app/js/checklist.js
   - room names in firmware/src/state.h match what the contract allows
 
 tools/test_device_http.py imports the validators to check a live ESP32.
@@ -128,7 +128,7 @@ def firmware_schedule_ids():
 
 
 def dashboard_schedule_ids():
-    path = ROOT / "docs/js/checklist.js"
+    path = ROOT / "app/js/checklist.js"
     return re.findall(r'\bid:\s*"([^"]+)"', path.read_text()) if path.exists() else []
 
 
@@ -158,15 +158,15 @@ def main():
     if set(dash_ids) - set(fw_ids):
         errs.append(f"in dashboard but not firmware (can never be checked off): "
                     f"{sorted(set(dash_ids) - set(fw_ids))}")
-    check("schedule ids: config.h == docs/js/checklist.js", errs)
+    check("schedule ids: config.h == app/js/checklist.js", errs)
 
     rooms = firmware_room_names()
     check("roomName() outputs are contract rooms",
           [f"firmware emits room {r!r} not in contract" for r in sorted(rooms - ROOMS)])
 
-    demo = json.loads((ROOT / "docs/data/demo.json").read_text())
-    check("docs/data/demo.json state", validate_state(demo.get("state"), set(fw_ids)))
-    check("docs/data/demo.json events",
+    demo = json.loads((ROOT / "app/data/demo.json").read_text())
+    check("app/data/demo.json state", validate_state(demo.get("state"), set(fw_ids)))
+    check("app/data/demo.json events",
           validate_events({"events": demo.get("events")}, 0, set(fw_ids)))
 
     return 1 if failures else 0

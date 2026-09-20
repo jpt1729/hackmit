@@ -10,7 +10,7 @@ There are four layers. Run them from the top down. Each one needs more hardware 
 | 4. Network | `python3 ../tools/test_device_http.py <ip> [--fire] [--set-time] [--soak 30]` | flashed device on the demo network | JSON contract, CORS, error codes, latency, prompt→shake→ack end to end, reboots or dropouts over a long soak |
 
 Plus one static check that needs no device:
-`python3 ../tools/contract.py` checks that `config.h` schedule ids match `docs/js/checklist.js`, and that `docs/data/demo.json` follows the contract.
+`python3 ../tools/contract.py` checks that `config.h` schedule ids match `app/js/checklist.js`, and that `app/data/demo.json` follows the contract.
 
 ## How the native tests work
 
