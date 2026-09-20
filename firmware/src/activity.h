@@ -1,11 +1,7 @@
 #pragma once
 
-#include "state.h"
-
-namespace routine_anchor {
-
-void activity_init();
-void activity_tick(DeviceState& state);
-bool ack_detected();
-
-}  // namespace routine_anchor
+void  activityInit();
+void  activityTick();
+bool  activityAckConsume();
+bool  activityImuOk();      // false = MPU-6050 never answered on I2C
+float activityMotion();     // smoothed ||a| - 1g| in g: 0 = dead still

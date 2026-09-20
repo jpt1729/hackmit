@@ -1,0 +1,189 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 800" width="1040" height="800"
+     font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+  <rect width="1040" height="800" fill="#ffffff"/>
+  <rect x="0.5" y="0.5" width="1039" height="799" fill="none" stroke="#e2e8f0"/>
+
+  <text x="40" y="52" font-size="26" font-weight="600" fill="#0f172a">Routine Anchor — wiring</text>
+  <text x="40" y="78" font-size="14" fill="#64748b">One ESP32 DevKit. Pin names match firmware/src/config.h.</text>
+
+  <!-- ===================== ESP32 ===================== -->
+  <rect x="420" y="170" width="200" height="430" rx="12" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
+  <text x="520" y="203" font-size="17" font-weight="600" fill="#0f172a" text-anchor="middle">ESP32 DevKit</text>
+  <text x="520" y="222" font-size="12" fill="#64748b" text-anchor="middle">38-pin, USB powered</text>
+
+  <!-- left pins -->
+  <circle cx="420" cy="260" r="4" fill="#334155"/>
+  <text x="432" y="264" font-size="13" fill="#334155">3V3</text>
+  <circle cx="420" cy="300" r="4" fill="#334155"/>
+  <text x="432" y="304" font-size="13" fill="#334155">GND</text>
+  <circle cx="420" cy="340" r="4" fill="#334155"/>
+  <text x="432" y="344" font-size="13" fill="#334155">GPIO 21 · SDA</text>
+  <circle cx="420" cy="380" r="4" fill="#334155"/>
+  <text x="432" y="384" font-size="13" fill="#334155">GPIO 22 · SCL</text>
+
+  <!-- right pins -->
+  <circle cx="620" cy="260" r="4" fill="#334155"/>
+  <text x="608" y="264" font-size="13" fill="#334155" text-anchor="end">VIN · 5V</text>
+  <circle cx="620" cy="300" r="4" fill="#334155"/>
+  <text x="608" y="304" font-size="13" fill="#334155" text-anchor="end">GND</text>
+  <circle cx="620" cy="340" r="4" fill="#334155"/>
+  <text x="608" y="344" font-size="13" fill="#334155" text-anchor="end">GPIO 16 · RX2</text>
+  <circle cx="620" cy="430" r="4" fill="#334155"/>
+  <text x="608" y="434" font-size="13" fill="#334155" text-anchor="end">GPIO 27</text>
+  <circle cx="620" cy="510" r="4" fill="#334155"/>
+  <text x="608" y="514" font-size="13" fill="#334155" text-anchor="end">GPIO 26</text>
+
+  <text x="520" y="570" font-size="11" fill="#94a3b8" text-anchor="middle">GPIO 0 / 2 / 12 / 15 are</text>
+  <text x="520" y="585" font-size="11" fill="#94a3b8" text-anchor="middle">strapping pins — leave free</text>
+
+  <!-- ===================== MPU-6050 ===================== -->
+  <rect x="60" y="140" width="200" height="140" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="75" y="166" font-size="15" font-weight="600" fill="#0f172a">MPU-6050</text>
+  <text x="75" y="184" font-size="11.5" fill="#64748b">6-axis IMU · I2C 0x68</text>
+  <text x="248" y="214" font-size="12.5" fill="#334155" text-anchor="end">VCC</text>
+  <circle cx="260" cy="210" r="3.5" fill="#334155"/>
+  <text x="248" y="232" font-size="12.5" fill="#334155" text-anchor="end">GND</text>
+  <circle cx="260" cy="228" r="3.5" fill="#334155"/>
+  <text x="248" y="250" font-size="12.5" fill="#334155" text-anchor="end">SDA</text>
+  <circle cx="260" cy="246" r="3.5" fill="#334155"/>
+  <text x="248" y="268" font-size="12.5" fill="#334155" text-anchor="end">SCL</text>
+  <circle cx="260" cy="264" r="3.5" fill="#334155"/>
+
+  <!-- ===================== OLED ===================== -->
+  <rect x="60" y="340" width="200" height="140" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="75" y="366" font-size="15" font-weight="600" fill="#0f172a">OLED 0.96"</text>
+  <text x="75" y="384" font-size="11.5" fill="#64748b">SSD1306 128×64 · I2C 0x3C</text>
+  <text x="248" y="414" font-size="12.5" fill="#334155" text-anchor="end">VCC</text>
+  <circle cx="260" cy="410" r="3.5" fill="#334155"/>
+  <text x="248" y="432" font-size="12.5" fill="#334155" text-anchor="end">GND</text>
+  <circle cx="260" cy="428" r="3.5" fill="#334155"/>
+  <text x="248" y="450" font-size="12.5" fill="#334155" text-anchor="end">SDA</text>
+  <circle cx="260" cy="446" r="3.5" fill="#334155"/>
+  <text x="248" y="468" font-size="12.5" fill="#334155" text-anchor="end">SCL</text>
+  <circle cx="260" cy="464" r="3.5" fill="#334155"/>
+
+  <!-- ===================== left wiring: shared I2C bus ===================== -->
+  <!-- 3V3 -->
+  <g fill="none" stroke="#dc2626" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M260 210 H300 V410 H260"/>
+    <path d="M300 260 H420"/>
+  </g>
+  <circle cx="300" cy="260" r="4" fill="#dc2626"/>
+  <!-- GND -->
+  <g fill="none" stroke="#334155" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M260 228 H320 V428 H260"/>
+    <path d="M320 300 H420"/>
+  </g>
+  <circle cx="320" cy="300" r="4" fill="#334155"/>
+  <!-- SDA -->
+  <g fill="none" stroke="#2563eb" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M260 246 H340 V446 H260"/>
+    <path d="M340 340 H420"/>
+  </g>
+  <circle cx="340" cy="340" r="4" fill="#2563eb"/>
+  <!-- SCL -->
+  <g fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M260 264 H360 V464 H260"/>
+    <path d="M360 380 H420"/>
+  </g>
+  <circle cx="360" cy="380" r="4" fill="#16a34a"/>
+  <text x="270" y="505" font-size="11.5" fill="#94a3b8">both I2C devices share one bus</text>
+
+  <!-- ===================== GPS ===================== -->
+  <rect x="780" y="130" width="210" height="140" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="795" y="156" font-size="15" font-weight="600" fill="#0f172a">GT-U7 GPS</text>
+  <text x="795" y="174" font-size="11.5" fill="#64748b">NEO-6M · UART 9600 baud</text>
+  <text x="792" y="204" font-size="12.5" fill="#334155">VCC</text>
+  <circle cx="780" cy="200" r="3.5" fill="#334155"/>
+  <text x="792" y="222" font-size="12.5" fill="#334155">GND</text>
+  <circle cx="780" cy="218" r="3.5" fill="#334155"/>
+  <text x="792" y="240" font-size="12.5" fill="#334155" font-weight="600">TX</text>
+  <circle cx="780" cy="236" r="3.5" fill="#334155"/>
+  <text x="792" y="258" font-size="12.5" fill="#94a3b8">RX — not connected</text>
+
+  <!-- ===================== NeoPixel ring ===================== -->
+  <rect x="780" y="340" width="210" height="130" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="795" y="366" font-size="15" font-weight="600" fill="#0f172a">NeoPixel ring</text>
+  <text x="795" y="384" font-size="11.5" fill="#64748b">mini, 12 px · WS2812B</text>
+  <text x="792" y="414" font-size="12.5" fill="#334155">5V</text>
+  <circle cx="780" cy="410" r="3.5" fill="#334155"/>
+  <text x="792" y="432" font-size="12.5" fill="#334155">GND</text>
+  <circle cx="780" cy="428" r="3.5" fill="#334155"/>
+  <text x="792" y="450" font-size="12.5" fill="#334155">DIN</text>
+  <circle cx="780" cy="446" r="3.5" fill="#334155"/>
+
+  <!-- ===================== piezo ===================== -->
+  <rect x="780" y="530" width="210" height="110" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="795" y="556" font-size="15" font-weight="600" fill="#0f172a">Piezo buzzer</text>
+  <text x="795" y="574" font-size="11.5" fill="#64748b">passive disc · LEDC tones</text>
+  <text x="792" y="604" font-size="12.5" fill="#334155">+</text>
+  <circle cx="780" cy="600" r="3.5" fill="#334155"/>
+  <text x="792" y="622" font-size="12.5" fill="#334155">−</text>
+  <circle cx="780" cy="618" r="3.5" fill="#334155"/>
+
+  <!-- ===================== right wiring ===================== -->
+  <!-- 5V rail: GPS + ring -->
+  <g fill="none" stroke="#f97316" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M780 200 H740 V410 H780"/>
+    <path d="M740 260 H620"/>
+  </g>
+  <circle cx="740" cy="260" r="4" fill="#f97316"/>
+  <!-- GND rail: GPS + ring + piezo -->
+  <g fill="none" stroke="#334155" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M780 218 H720 V618 H780"/>
+    <path d="M720 300 H620"/>
+    <path d="M720 428 H780"/>
+  </g>
+  <circle cx="720" cy="300" r="4" fill="#334155"/>
+  <circle cx="720" cy="428" r="4" fill="#334155"/>
+  <!-- GPS TX -> GPIO16 -->
+  <g fill="none" stroke="#0891b2" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M780 236 H700 V340 H620"/>
+  </g>
+  <!-- ring DIN -> 330R -> GPIO27 -->
+  <g fill="none" stroke="#7c3aed" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M780 446 H772"/>
+    <path d="M748 446 H680 V430 H620"/>
+  </g>
+  <rect x="748" y="438" width="24" height="16" rx="3" fill="#ffffff" stroke="#7c3aed" stroke-width="1.8"/>
+  <text x="760" y="478" font-size="11.5" fill="#7c3aed" text-anchor="middle">330 Ω</text>
+  <!-- piezo + -> 100R -> GPIO26 -->
+  <g fill="none" stroke="#b45309" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M780 600 H772"/>
+    <path d="M748 600 H660 V510 H620"/>
+  </g>
+  <rect x="748" y="592" width="24" height="16" rx="3" fill="#ffffff" stroke="#b45309" stroke-width="1.8"/>
+  <text x="760" y="632" font-size="11.5" fill="#b45309" text-anchor="middle">100 Ω</text>
+
+  <!-- ===================== notes ===================== -->
+  <text x="60" y="545" font-size="13" font-weight="600" fill="#0f172a">Watch out for</text>
+  <text x="60" y="568" font-size="12.5" fill="#334155">• One common ground. The 5V parts and the 3V3 parts share it.</text>
+  <text x="60" y="590" font-size="12.5" fill="#334155">• GPS <tspan font-weight="600">TX</tspan> goes to the ESP32 <tspan font-weight="600">RX2</tspan>. Swapping them = silent UART.</text>
+  <text x="60" y="612" font-size="12.5" fill="#334155">• IMU + OLED on 3V3; GPS + ring on VIN (5V).</text>
+  <text x="60" y="634" font-size="12.5" fill="#334155">• GPS needs sky. A cold first fix at a window takes 1–2 min.</text>
+  <text x="60" y="656" font-size="12.5" fill="#334155">• Ring brightness is capped in firmware: 12 px at full white</text>
+  <text x="72" y="674" font-size="12.5" fill="#334155">would draw more than USB gives you.</text>
+  <text x="60" y="696" font-size="12.5" fill="#334155">• Active buzzer instead of passive? Set BUZZER_PASSIVE 0.</text>
+
+  <!-- ===================== legend ===================== -->
+  <text x="420" y="640" font-size="13" font-weight="600" fill="#0f172a">Nets</text>
+  <g stroke-width="3" stroke-linecap="round">
+    <line x1="420" y1="662" x2="452" y2="662" stroke="#dc2626"/>
+    <line x1="420" y1="686" x2="452" y2="686" stroke="#f97316"/>
+    <line x1="420" y1="710" x2="452" y2="710" stroke="#334155"/>
+    <line x1="420" y1="734" x2="452" y2="734" stroke="#2563eb"/>
+    <line x1="600" y1="662" x2="632" y2="662" stroke="#16a34a"/>
+    <line x1="600" y1="686" x2="632" y2="686" stroke="#0891b2"/>
+    <line x1="600" y1="710" x2="632" y2="710" stroke="#7c3aed"/>
+    <line x1="600" y1="734" x2="632" y2="734" stroke="#b45309"/>
+  </g>
+  <text x="462" y="666" font-size="12.5" fill="#334155">3V3</text>
+  <text x="462" y="690" font-size="12.5" fill="#334155">5V (VIN)</text>
+  <text x="462" y="714" font-size="12.5" fill="#334155">GND</text>
+  <text x="462" y="738" font-size="12.5" fill="#334155">SDA · GPIO 21</text>
+  <text x="642" y="666" font-size="12.5" fill="#334155">SCL · GPIO 22</text>
+  <text x="642" y="690" font-size="12.5" fill="#334155">GPS TX · GPIO 16</text>
+  <text x="642" y="714" font-size="12.5" fill="#334155">Ring DIN · GPIO 27</text>
+  <text x="642" y="738" font-size="12.5" fill="#334155">Piezo · GPIO 26</text>
+  <text x="850" y="770" font-size="11" fill="#94a3b8" text-anchor="end">Crossing lines are not connected; dots are junctions.</text>
+</svg>
