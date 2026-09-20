@@ -15,11 +15,16 @@ function setupWatchMessage(form) {
   const status = document.getElementById("watch-message-status");
   if (!input || !button || !counter || !status) return;
 
-  const connected = deviceOnline();
-  input.disabled = button.disabled = !connected;
-  if (!connected) {
-    status.textContent = "Connect a wristband to send a note to its screen.";
-  }
+  // setup runs before the first poll, so connectivity is decided here and then
+  // kept in step with the connection - otherwise the box stays disabled for a
+  // wristband that is right there.
+  const setConnected = (online) => {
+    input.disabled = button.disabled = !online;
+    if (!online) status.textContent = "Connect a wristband to send a note to its screen.";
+    else if (status.textContent.startsWith("Connect a wristband")) status.textContent = "";
+  };
+  setConnected(deviceOnline());
+  document.addEventListener("mode-change", ({ detail }) => setConnected(detail.mode === "live"));
 
   const updateCount = () => {
     counter.textContent = `${input.value.length}/${MAX_LEN}`;

@@ -25,14 +25,20 @@ function timestamp(value) {
   return typeof value === "number" && Number.isFinite(value) && value > 0 && Number.isFinite(new Date(value * 1000).getTime()) ? value : null;
 }
 
+// Reads the frozen /state contract: `gps.fix` with `gps.lat` / `gps.lon`.
+// This used to look for `latitude`, `longitude` and `valid`, which no version
+// of the firmware has ever sent, so every fix was rejected and the map could
+// never plot the bracelet however good the signal was.
 function gpsFix(report) {
   const gps = report.gps;
-  if (!gps || gps.valid === false || gps.demo === true) return null;
-  const { latitude, longitude, accuracy } = gps;
-  if (typeof latitude !== "number" || !Number.isFinite(latitude) || Math.abs(latitude) > 90 ||
-      typeof longitude !== "number" || !Number.isFinite(longitude) || Math.abs(longitude) > 180) return null;
+  if (!gps || gps.fix !== true) return null;
+  const { lat, lon, accuracy } = gps;
+  if (typeof lat !== "number" || !Number.isFinite(lat) || Math.abs(lat) > 90 ||
+      typeof lon !== "number" || !Number.isFinite(lon) || Math.abs(lon) > 180) return null;
+  // The contract carries no accuracy figure yet, so the accuracy circle stays
+  // off until /state grows one. Everything else works without it.
   return {
-    latitude, longitude,
+    latitude: lat, longitude: lon,
     accuracy: typeof accuracy === "number" && Number.isFinite(accuracy) && accuracy >= 0 ? accuracy : null,
     ts: timestamp(gps.ts ?? report.ts)
   };
@@ -57,9 +63,15 @@ function renderMap() {
   }
   if (!map) {
     map = L.map(mapRoot, { scrollWheelZoom: false }).setView([20, 0], 2);
-    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    // Esri's World Street Map. Not tile.openstreetmap.org: those servers are
+    // volunteer-run and their usage policy does not cover an app using them as
+    // a basemap, so they rate-limit and the panel fills with "Access blocked"
+    // tiles - which is what it did here. CARTO was the other candidate and it
+    // stamps "API KEY REQUIRED" across every tile on the free tier. Esri serves
+    // these without a key and asks only for the attribution below.
+    L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}", {
       maxZoom: 19,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      attribution: 'Tiles &copy; <a href="https://www.esri.com/">Esri</a>'
     }).on("tileerror", () => {
       mapError.hidden = false;
       setText(mapError, "Some streets could not load. Check your internet connection. Location details are still shown below.");
