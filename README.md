@@ -1,14 +1,16 @@
-# Granny Nanny — Build Spec
+# Brain Buddy — Build Spec
 
-Granny Nanny's brain mascot is named **Brain Buddy**.
+Brain Buddy's brain mascot is named **Brain Buddy**.
 
-In Patient view, Brain Buddy sits below the demo toggle and shows the caregiver’s latest voice message and transcription. The patient’s recording area comes next, followed by today’s routine clock and weekly progress. Brain Buddy is hidden in Caregiver view, which retains the full recent message history.
+The demo view toggle sits at the top of the page. In Patient view, Brain Buddy gently bobs, waves, and blinks (respecting reduced motion settings) below the page heading and shows the caregiver’s latest voice message and transcription. The patient’s recording area comes next, followed by today’s routine clock and weekly progress. Brain Buddy is hidden in Caregiver view, which retains the full recent message history.
 
-The clock displays 12 sample activities from 8 AM through 7 PM, with AM/PM labels on each symbol. These are dashboard schedule entries; actual bracelet prompts are configured separately in the firmware. Received and missed states update when matching prompt events arrive.
+Caregivers can add and remove activities under **Edit routine bubbles**, using a name, time, and icon. The schedule is saved in this browser and synchronized between open tabs; it is not sent to the wristband. Removing every activity shows an empty routine. Crowded times use additional clock rings with horizontal scrolling on smaller screens.
 
-In **Caregiver** view, **For caregivers** shows an interactive street map with pan/zoom, a bracelet marker, GPS accuracy circle, recenter control, and a link to open the coordinates in Google Maps. The map uses locally bundled [Leaflet 1.9.4](https://leafletjs.com/) with [OpenStreetMap](https://www.openstreetmap.org/copyright) street tiles. No map API key is needed. Street tiles require internet access; they use normal browser caching and are not downloaded for offline use. Location details remain readable if tiles fail. Tiles only load when the caregiver map is visible.
+The clock initially displays 12 sample activities from 8 AM through 7 PM, with AM/PM labels on each symbol. These are dashboard schedule entries; actual bracelet prompts are configured separately in the firmware. Received and missed states update when matching prompt events arrive.
 
-**GPS is a frontend integration, not yet provided by the firmware.** The replay fixture includes explicitly simulated coordinates near MIT for demonstrating the map. Room estimates cannot determine a street position, and the site never uses the browser’s own location as the bracelet’s. Missing or invalid coordinates show no marker; old GPS timestamps are labeled as last reported. Off-wrist status refers to the bracelet rather than the person.
+In **Caregiver** view, the map, contact settings, notices, and device activity are always expanded, with no dropdown. The map appears before the routine clock and weekly progress. The interactive street map comes with pan/zoom, a bracelet marker, GPS accuracy circle, recenter control, and a link to open the coordinates in Google Maps. The map uses locally bundled [Leaflet 1.9.4](https://leafletjs.com/) with [OpenStreetMap](https://www.openstreetmap.org/copyright) street tiles. No map API key is needed. Street tiles require internet access; they use normal browser caching and are not downloaded for offline use. Location details remain readable if tiles fail. Tiles only load when the caregiver map is visible.
+
+**GPS is a frontend integration, not yet provided by the firmware.** The map has no sample marker or demo labels. It waits for real GPS coordinates and ignores routine replay data. Room estimates cannot determine a street position, and the site never uses the browser’s own location as the bracelet’s. Missing or invalid coordinates show no marker; old GPS timestamps are labeled as last reported. Off-wrist status refers to the bracelet rather than the person.
 
 To connect real GPS, add this object to the bracelet’s `/state` response (example values only):
 
@@ -16,7 +18,7 @@ To connect real GPS, add this object to the bracelet’s `/state` response (exam
 "gps": { "latitude": 42.3601, "longitude": -71.0942, "accuracy": 25, "ts": 1758290400 }
 ```
 
-`latitude` and `longitude` are numeric degrees; `accuracy` is an optional radius in meters. `ts` is the GPS fix’s Unix timestamp in seconds (the state’s `ts` is the fallback). Send `gps: null` or `valid: false` inside `gps` when there is no fix. Do not refresh the fix timestamp unless GPS supplies a new measurement. The demo fixture’s `demo: true` flag is rejected in live mode. Existing `room`, `worn`, and room/wrist events still update the text below the map.
+`latitude` and `longitude` are numeric degrees; `accuracy` is an optional radius in meters. `ts` is the GPS fix’s Unix timestamp in seconds (the state’s `ts` is the fallback). Send `gps: null` or `valid: false` inside `gps` when there is no fix. Do not refresh the fix timestamp unless GPS supplies a new measurement. Coordinates marked `demo: true` are also rejected. Existing `room`, `worn`, and room/wrist events still update the text below the map.
 
 ## Voice messages
 
@@ -30,7 +32,7 @@ python3 tools/message_server.py
 
 Open `http://127.0.0.1:8787/`. For a live wristband, append `?device=ESP32_IP`. Participants, recordings, and transcripts are stored in the local SQLite file `var/voice_messages.sqlite3`; previous recordings are preserved. This is a demo without authentication: anyone who can access the server can view and send messages as either role. The database is ignored by Git. To use separate devices, host this server on a trusted HTTPS connection using `VOICE_HOST`, `VOICE_TLS_CERT`, and `VOICE_TLS_KEY`; browsers require a secure context for microphone recording. The static page still shows the routine but cannot send or receive messages without the server.
 
-The page follows the browser's default text size. Clock symbols show reminder status with colors and accessible labels; there is no separate morning routine reminder box or text-size control. The clock has a **Weekly progress** tab with seven vertical stacked bars (purple for received, red for missed, amber for unconfirmed) on a shared count axis. It summarizes only `prompt_fired`, `prompt_acked`, and `prompt_missed` events the browser has observed. Live history is stored in that browser for up to 45 days; replay history is kept separate and resets when replay starts. A blank day means there is no recorded data, not that the person missed every task. A caregiver can add or change a trusted name and phone number in **For caregivers**; the page then shows a one-tap call link near the top. The contact is stored in that browser only.
+The page follows the browser's default text size. Clock symbols show reminder status with colors and accessible labels; there is no separate morning routine reminder box or text-size control. The clock has a **Weekly progress** tab with seven vertical stacked bars (purple for received, red for missed, amber for unconfirmed) on a shared count axis. It summarizes only `prompt_fired`, `prompt_acked`, and `prompt_missed` events the browser has observed. Live history is stored in that browser for up to 45 days; replay history is kept separate and resets when replay starts. A blank day means there is no recorded data, not that the person missed every task. A caregiver can add or change a trusted name and phone number in **Caregiver** view; the page then shows a one-tap call link near the top. The contact is stored in that browser only.
 
 ESP32 wearable for people with dementia/TBI. Gentle haptic prompts tied to time + room-level location, with a caregiver dashboard and local voice messaging. ~$15 of parts for the original wearable prototype, excluding the message server.
 

@@ -1,4 +1,4 @@
-const ROUTINE_ITEMS = [
+const DEFAULT_ROUTINE_ITEMS = [
   { id: "breakfast", label: "Breakfast", time: "8:00 AM", minutes: 480, icon: "sun", status: "pending", description: "A little time for your morning meal." },
   { id: "meds_9am", label: "Medication", time: "9:00 AM", minutes: 540, icon: "pill", status: "pending", description: "Time for your medication." },
   { id: "walk", label: "Morning walk", time: "10:00 AM", minutes: 600, icon: "walk", status: "pending", description: "A little time for your morning walk." },
@@ -25,12 +25,82 @@ const ICONS = {
   music: '<path d="M12 23V7l14-3v16M12 11l14-3"/><ellipse cx="8" cy="25" rx="4" ry="3"/><ellipse cx="22" cy="22" rx="4" ry="3"/>',
   moon: '<path d="M25 21A12 12 0 0 1 11 4a12 12 0 1 0 14 17Z"/><path d="M23 3v6m-3-3h6"/>'
 };
+const ROUTINE_STORAGE_KEY = "granny-nanny-routine-v1";
+let items = DEFAULT_ROUTINE_ITEMS.map((item) => ({ ...item }));
+
+function formatTime(minutes) {
+  const hours = Math.floor(minutes / 60);
+  return `${hours % 12 || 12}:${String(minutes % 60).padStart(2, "0")} ${hours < 12 ? "AM" : "PM"}`;
+}
+
+function parseSchedule(value) {
+  if (!Array.isArray(value) || value.length > 48) return null;
+  const ids = new Set();
+  const parsed = [];
+  for (const item of value) {
+    if (!item || typeof item.id !== "string" || !/^[a-zA-Z0-9_-]{1,80}$/.test(item.id) || ids.has(item.id) ||
+        typeof item.label !== "string" || !item.label.trim() || item.label.length > 60 ||
+        !Number.isInteger(item.minutes) || item.minutes < 0 || item.minutes >= 1440 || !Object.hasOwn(ICONS, item.icon)) return null;
+    ids.add(item.id);
+    parsed.push({ id: item.id, label: item.label.trim(), minutes: item.minutes, icon: item.icon, time: formatTime(item.minutes), status: "pending" });
+  }
+  return parsed.sort((a, b) => a.minutes - b.minutes);
+}
+
+try {
+  const saved = localStorage.getItem(ROUTINE_STORAGE_KEY);
+  if (saved !== null) items = parseSchedule(JSON.parse(saved)) || items;
+} catch { /* The schedule can still be edited for this visit. */ }
+
+function saveSchedule() {
+  let saved = true;
+  try {
+    localStorage.setItem(ROUTINE_STORAGE_KEY, JSON.stringify(items.map(({ id, label, minutes, icon }) => ({ id, label, minutes, icon }))));
+  } catch { saved = false; }
+  document.dispatchEvent(new CustomEvent("routine-change", { detail: { saved } }));
+  return saved;
+}
+
+function addRoutine(label, time, icon) {
+  const name = label.trim();
+  if (!name || name.length > 60) throw new Error("Enter an activity name of up to 60 characters.");
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) throw new Error("Choose a time for the activity.");
+  if (!Object.hasOwn(ICONS, icon)) throw new Error("Choose an activity icon.");
+  if (items.length >= 48) throw new Error("Your routine has 48 activities. Remove an activity before adding another.");
+  const [hours, minute] = time.split(":").map(Number);
+  const minutes = hours * 60 + minute;
+  const item = { id: `custom_${crypto.randomUUID()}`, label: name, minutes, time: formatTime(minutes), icon, status: "pending" };
+  items.push(item);
+  items.sort((a, b) => a.minutes - b.minutes);
+  return { item, saved: saveSchedule() };
+}
+
+function removeRoutine(id) {
+  const item = items.find((entry) => entry.id === id);
+  if (!item) return null;
+  items = items.filter((entry) => entry.id !== id);
+  if (selectedId === id) { selectedId = null; selectionPinned = false; }
+  return { item, saved: saveSchedule() };
+}
+
+window.addEventListener("storage", (event) => {
+  if (event.key !== ROUTINE_STORAGE_KEY) return;
+  try {
+    const incoming = event.newValue === null ? DEFAULT_ROUTINE_ITEMS.map((item) => ({ ...item })) : parseSchedule(JSON.parse(event.newValue));
+    if (!incoming) return;
+    const statuses = new Map(items.map((item) => [item.id, item.status]));
+    items = incoming.map((item) => ({ ...item, status: statuses.get(item.id) || "pending" }));
+    if (!items.some((item) => item.id === selectedId)) { selectedId = null; selectionPinned = false; }
+    document.dispatchEvent(new CustomEvent("routine-change", { detail: { saved: true } }));
+  } catch { /* Ignore invalid saved schedules. */ }
+});
+
 const STATUS = { pending: "Scheduled", active: "Reminder sent", done: "Received", missed: "Not yet acknowledged" };
 let selectedId = null;
 let selectionPinned = false;
 let routineTime = null;
 
-function routineItems() { return ROUTINE_ITEMS; }
+function routineItems() { return items; }
 function routineIcon(item) { return '<svg viewBox="0 0 32 32" aria-hidden="true">' + ICONS[item.icon] + '</svg>'; }
 function routineVisualState(item) {
   if (item.status !== "pending" || !routineTime) return item.status;
@@ -41,18 +111,18 @@ function routineStatus(item) {
 }
 function latestRoutine() {
   const minutes = routineTime ? routineTime.getHours() * 60 + routineTime.getMinutes() : -1;
-  return [...ROUTINE_ITEMS].reverse().find((item) => item.minutes <= minutes) || ROUTINE_ITEMS[0];
+  return [...items].reverse().find((item) => item.minutes <= minutes) || items[0];
 }
 function nextRoutine() {
   if (!routineTime) return null;
   const minutes = routineTime.getHours() * 60 + routineTime.getMinutes();
-  return ROUTINE_ITEMS.find((item) => item.status === "pending" && item.minutes >= minutes) || null;
+  return items.find((item) => item.status === "pending" && item.minutes >= minutes) || null;
 }
 function selectedRoutine() {
-  return ROUTINE_ITEMS.find((item) => item.id === selectedId) || nextRoutine() || latestRoutine();
+  return items.find((item) => item.id === selectedId) || nextRoutine() || latestRoutine() || null;
 }
 function selectRoutine(id) {
-  if (!ROUTINE_ITEMS.some((item) => item.id === id)) return;
+  if (!items.some((item) => item.id === id)) return;
   selectedId = id;
   selectionPinned = true;
 }
@@ -60,11 +130,11 @@ function setRoutineTime(ts) {
   const date = new Date(Number(ts) * 1000);
   if (!Number.isFinite(date.getTime())) return;
   routineTime = date;
-  if (!selectionPinned) selectedId = (ROUTINE_ITEMS.find((item) => item.status === "active") || nextRoutine() || latestRoutine()).id;
+  if (!selectionPinned) selectedId = (items.find((item) => item.status === "active") || nextRoutine() || latestRoutine())?.id || null;
 }
 
 function applyChecklistEvent(event) {
-  const item = ROUTINE_ITEMS.find((entry) => entry.id === event.detail);
+  const item = items.find((entry) => entry.id === event.detail);
   if (!item) return;
   const statuses = { prompt_fired: "active", prompt_acked: "done", prompt_missed: "missed" };
   if (!statuses[event.type]) return;
@@ -73,12 +143,12 @@ function applyChecklistEvent(event) {
 }
 
 function resetChecklist() {
-  ROUTINE_ITEMS.forEach((item) => { item.status = "pending"; });
+  items.forEach((item) => { item.status = "pending"; });
   selectedId = null;
   selectionPinned = false;
   routineTime = null;
 }
 
-function routineLabel(id) { return ROUTINE_ITEMS.find((item) => item.id === id)?.label || "Routine"; }
-export { applyChecklistEvent, resetChecklist, routineLabel,
+function routineLabel(id) { return items.find((item) => item.id === id)?.label || "Routine"; }
+export { addRoutine, removeRoutine, applyChecklistEvent, resetChecklist, routineLabel,
   routineItems, routineIcon, routineStatus, routineVisualState, selectedRoutine, selectRoutine, setRoutineTime };

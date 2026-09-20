@@ -30,8 +30,7 @@ function setupCaregiverContact() {
   setupLink.addEventListener("click", () => {
     document.dispatchEvent(new CustomEvent("demo-role-request", { detail: { role: "caregiver" } }));
     if (panel.hidden) return;
-    panel.open = true;
-    panel.scrollIntoView({ behavior: "smooth", block: "start" });
+    form.closest("section").scrollIntoView({ behavior: "smooth", block: "start" });
     nameInput.focus({ preventScroll: true });
   });
   form.addEventListener("submit", (event) => {

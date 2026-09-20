@@ -1,4 +1,4 @@
-import { bootApi, registerStateListener, registerEventListener, toggleReplay } from "./api.js";
+import { bootApi, registerStateListener, registerEventListener } from "./api.js";
 import { applyChecklistEvent, resetChecklist, routineLabel, routineStatus, selectedRoutine, selectRoutine, setRoutineTime } from "./checklist.js";
 import { renderClock } from "./clock.js";
 import { setupMessages } from "./messages.js";
@@ -6,6 +6,7 @@ import { addTimelineEvent, setTimelineState, renderTimeline, resetTimeline } fro
 import { renderAlerts } from "./alerts.js";
 import { setupProgress, recordProgressEvent, renderProgress, resetReplayProgress } from "./progress.js";
 import { setupCaregiverContact } from "./contact.js";
+import { setupRoutineEditor } from "./routine-editor.js";
 import { setupLocationMap } from "./location-map.js";
 
 const timelineRoot = document.getElementById("timeline");
@@ -13,7 +14,7 @@ const alertsRoot = document.getElementById("alerts");
 const modeBanner = document.getElementById("mode-banner");
 const modeDescription = document.getElementById("mode-description");
 const sessionDate = document.getElementById("session-date");
-const replayToggle = document.getElementById("replay-toggle");
+const connectionNotice = document.getElementById("connection-notice");
 const announcement = document.getElementById("routine-announcement");
 const eventLog = [];
 let mode = "";
@@ -27,23 +28,16 @@ setupMessages();
 setupProgress();
 setupCaregiverContact();
 setupLocationMap();
+setupRoutineEditor();
+document.addEventListener("routine-change", renderRoutine);
 document.getElementById("main").addEventListener("click", (event) => {
   const button = event.target.closest("[data-select-routine]");
   if (!button) return;
   selectRoutine(button.dataset.selectRoutine);
   renderRoutine();
   const selected = selectedRoutine();
+  if (!selected) return;
   announcement.textContent = selected.label + " at " + selected.time + ". " + routineStatus(selected) + ".";
-});
-
-replayToggle.addEventListener("click", toggleReplay);
-document.addEventListener("replay-status", ({ detail }) => {
-  replayToggle.disabled = detail.complete;
-  replayToggle.textContent = detail.complete ? "Demo finished" : detail.paused ? "Continue demo" : "Pause demo";
-  if (detail.complete) modeDescription.textContent = "The recorded example has finished. These are not live reminders.";
-  else modeDescription.textContent = detail.paused
-    ? "The example is paused. Select Continue demo when you are ready."
-    : "This is a recorded example, not your live routine.";
 });
 
 function updateDate() {
@@ -69,16 +63,15 @@ document.addEventListener("mode-change", ({ detail }) => {
   const copy = {
     live: ["Your wristband is connected.", "Your reminders update here automatically."],
     connecting: ["Connecting to your wristband…", "Waiting for an update. Your caregiver can check the connection."],
-    unavailable: ["We could not load your routine.", "Please ask your caregiver to check the connection, then reload this page."],
-    replay: ["You are viewing a demo.", "This is a recorded example, not your live routine."]
+    unavailable: ["We could not load your routine.", "Please ask your caregiver to check the connection, then reload this page."]
   };
-  const [title, description] = copy[mode];
+  const [title, description] = copy[mode] || ["", ""];
+  connectionNotice.hidden = mode === "replay";
   // Do not repeatedly announce successful polls.
   if (modeBanner.textContent !== title) {
     modeBanner.textContent = title;
     modeDescription.textContent = description;
   }
-  replayToggle.hidden = mode !== "replay";
   updateDate();
   renderClock(currentState?.ts, mode === "replay");
 });

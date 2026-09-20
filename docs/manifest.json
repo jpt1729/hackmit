@@ -1,6 +1,6 @@
 {
-  "name": "Granny Nanny",
-  "short_name": "Granny Nanny",
+  "name": "Brain Buddy",
+  "short_name": "Brain Buddy",
   "description": "Gentle daily reminders and voice messages between patient and caregiver.",
   "start_url": "./",
   "scope": "./",
