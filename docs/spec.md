@@ -28,8 +28,11 @@ flowchart LR
         LOC --> LOG
         GPS --> LOG
         LOG --> API[HTTP server<br/>GET /state, /events]
+        SCHED[schedule module<br/>routine in NVS] --> PE
+        SCHED --> API
     end
-    API -- "JSON over LAN,<br/>polled every 3s" --> DASH[Caregiver dashboard<br/>static JS]
+    API -- "JSON over LAN,<br/>polled every 3s" --> DASH[Caregiver website<br/>static JS]
+    DASH -- "POST /schedule, /time,<br/>/ack, /silence" --> API
     DEMO[data/demo.json] -. replay mode .-> DASH
 ```
 
@@ -132,12 +135,19 @@ struct Event {
 - No IMU answer → fail open (`worn = true`), so a dead sensor never mutes the day's prompts.
 - Slide language: "not detected on body", never "removed". `test_imu_noise_floor_is_below_the_wear_threshold` on the device checks this board's noise floor actually sits under the threshold.
 
+### schedule — the caregiver's routine
+- The reminder table the band runs on, and the reason the routine editor is not just a list in a browser. `config.h` holds `DEFAULT_SCHEDULE` for a band nobody has set up; the website replaces it with `POST /schedule` and the accepted body is kept in NVS, so a flat battery does not undo the setup.
+- Bounded on purpose: 24 reminders, ids and labels up to 47 characters. Ids are wide enough for the `custom_<uuid>` the routine editor mints, and `events.cpp` stores the same width so an id always matches back to the activity that produced it.
+- A replacement is all-or-nothing. A body that fails to parse leaves the running routine untouched and answers with a reason a caregiver can read — half a routine is worse than an out-of-date one.
+- Hand-rolled JSON parsing, for the same reason `gps.cpp` parses its own NMEA: one less library between the caregiver and the wrist. Unknown top-level fields are skipped, so what `GET /schedule` serves is a body `POST /schedule` accepts.
+- Applying is separate from persisting, so the website gets its answer as soon as the routine is live rather than after a flash write. `promptsScheduleChanged()` drops anything holding an index into the old table.
+
 ### prompts — the product
-- Schedule table in `config.h`: `{hour, minute, label, requiredRoom (or ANY), gate}`.
+- Reads the live table from `schedule.h`: `{hour, minute, id, label, room (or ANY)}`.
 - Gate logic per tick: time reached AND `worn` AND `activity != SLEEPING` AND **not** `awayFromHome` AND (room matches OR requiredRoom == ANY OR room == UNKNOWN-with-stub).
 - Fire → `buzzerGentle()`, ring turns amber, label goes on the OLED, set `pendingPrompt`, emit `prompt_fired`, start 60 s ack window.
 - Shake within window → `prompt_acked` (ring flashes green, OLED says "Done!"). Timeout → re-chime once, then `prompt_missed` (dashboard alert). Hold-if-not-worn / away: hold the prompt until they are back and wearing it, up to 30 min.
-- `POST /demo/fire` forces a prompt (demo insurance); `POST /ack` lets the caregiver tick one off from the dashboard.
+- `POST /demo/fire` forces a prompt (demo insurance); `POST /ack` lets the caregiver tick one off from the website when they are in the room and can see it was done.
 
 ### buzzer — piezo
 - Passive piezo on `PIN_BUZZER`, driven with LEDC tones; patterns are `{frequency, ms}` note lists played by a non-blocking sequencer.
@@ -162,12 +172,15 @@ struct Event {
 - `WebServer` (or ESPAsyncWebServer) on port 80:
   - `GET /state` → current `DeviceState` as JSON
   - `GET /events?since=<id>` → array of events after id
+  - `GET /schedule` → the routine the band is running, and whether it came from the website or from `config.h`
+  - `POST /schedule` → replace it (all-or-nothing; 400 with a readable reason, old routine kept)
+  - `GET /scan` → a raw WiFi scan for `tools/fingerprint_trainer.py`; blocks the loop for ~2 s, so it is a setup endpoint
   - `POST /demo/fire?id=<n>` → force a scheduled prompt now (demo insurance)
   - `POST /ack` → acknowledge the pending prompt from the dashboard (409 if none)
   - `POST /silence` → stop the away-from-home chime, keep the alert
   - `POST /time?epoch=<n>` → set the clock
 - CORS header `Access-Control-Allow-Origin: *` on everything — the dashboard is served from a different origin in both modes.
-- Clock, in order of preference: NTP at boot → GPS `RMC` → `POST /time` from the dashboard.
+- Clock, in order of preference: NTP at boot → GPS `RMC` → `POST /time` from the website. The last one is not a fallback in practice: the ESP32 has no battery-backed clock, and until something sets it `timeValid()` stays false and no scheduled reminder fires at all. The website sets it automatically on connect.
 
 ---
 
@@ -179,12 +192,13 @@ Plain HTML/CSS/JS, no build step — it must run from `file://`-adjacent local s
   - `?device=192.168.x.x` URL param → live mode, poll `GET /state` (3 s) + `GET /events?since` (3 s).
   - No param, or 3 consecutive fetch failures → replay mode: load `data/demo.json`, play events on a timer; the clock and date indicate recorded time.
   - Exposes one interface to the rest: `onState(cb)`, `onEvent(cb)`. Checklist/timeline/alerts never know which mode they're in.
+- **device.js** — the write half of the contract. Pushes the routine on connect and on every edit (debounced), and carries the two controls that used to exist only on the wrist: acknowledge the pending reminder, silence the away-from-home chime.
 - **checklist.js** — renders the schedule; `prompt_acked` checks items off, `prompt_missed` marks them red.
 - **timeline.js** — horizontal day strip: activity color bands, room labels, wear gaps hatched.
-- **alerts.js** — reverse-chron feed for `wander`, `wear_off`, `prompt_missed`. These three are the only alert types; resist adding more.
+- **alerts.js** — reverse-chron feed for `wander`, `wear_off`, `prompt_missed`, `geofence_exit`, plus the live controls for a pending reminder and an away-from-home episode.
 - **app.js** — boots api.js, wires callbacks, handles the mode banner and a "device: connected/last seen" indicator.
 
-Schedule duplication note: the schedule lives in `config.h` (firmware truth) and is mirrored in a small JS constant for checklist rendering. Two sources of truth is ugly but correct for the timebox; website schedule editing is local to the browser and does not change the firmware schedule.
+One source of truth: the website owns the routine and pushes it to the band over `POST /schedule`, which keeps it in NVS. `config.h` holds only the fallback a band uses before anyone has set it up, and `tools/contract.py` checks that fallback is something a fresh website can still draw.
 
 ---
 
@@ -223,7 +237,7 @@ Schedule duplication note: the schedule lives in `config.h` (firmware truth) and
 ]}
 ```
 
-Event vocabulary (complete, do not grow it mid-hack): `prompt_fired`, `prompt_acked`, `prompt_missed`, `wear_on`, `wear_off`, `room_change`, `wander`, `geofence_exit`, `geofence_return`.
+Event vocabulary (complete): `prompt_fired`, `prompt_acked`, `prompt_missed`, `wear_on`, `wear_off`, `room_change`, `wander`, `geofence_exit`, `geofence_return`, `schedule_set`.
 
 When there is no fix, `gps.fix` is `false` and `lat`/`lon`/`distanceHomeM` are `null` — never a stale position. `awayFromHome` holds its last known value, because losing GPS is not the same as coming home.
 

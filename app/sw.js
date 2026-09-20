@@ -1,4 +1,4 @@
-const CACHE_NAME = "routine-anchor-v65";
+const CACHE_NAME = "routine-anchor-v66";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -9,6 +9,7 @@ const APP_SHELL = [
   "./js/alerts.js",
   "./js/api.js",
   "./js/checklist.js",
+  "./js/device.js",
   "./js/routine-editor.js",
   "./js/clock.js",
   "./js/progress.js",
