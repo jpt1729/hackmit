@@ -1,61 +1,41 @@
 import { bootApi, registerStateListener, registerEventListener, toggleReplay } from "./api.js";
-import { renderChecklist, applyChecklistEvent, renderFocus, resetChecklist, routineLabel, selectRoutine, setRoutineTime } from "./checklist.js";
+import { applyChecklistEvent, resetChecklist, routineLabel, routineStatus, selectedRoutine, selectRoutine, setRoutineTime } from "./checklist.js";
 import { renderClock } from "./clock.js";
-import { setupCompanion } from "./companion.js";
+import { setupMessages } from "./messages.js";
 import { addTimelineEvent, setTimelineState, renderTimeline, resetTimeline } from "./timeline.js";
 import { renderAlerts } from "./alerts.js";
+import { setupProgress, recordProgressEvent, renderProgress, resetReplayProgress } from "./progress.js";
+import { setupCaregiverContact } from "./contact.js";
+import { setupLocationMap } from "./location-map.js";
 
-const checklistRoot = document.getElementById("checklist");
 const timelineRoot = document.getElementById("timeline");
 const alertsRoot = document.getElementById("alerts");
 const modeBanner = document.getElementById("mode-banner");
 const modeDescription = document.getElementById("mode-description");
 const sessionDate = document.getElementById("session-date");
 const replayToggle = document.getElementById("replay-toggle");
-const textSize = document.getElementById("text-size");
-const themeToggle = document.getElementById("theme-toggle");
 const announcement = document.getElementById("routine-announcement");
 const eventLog = [];
 let mode = "";
 let currentState = null;
 
-function setTheme(dark) {
-  document.documentElement.dataset.theme = dark ? "dark" : "light";
-  themeToggle.setAttribute("aria-pressed", String(dark));
-  document.querySelector('meta[name="theme-color"]').content = dark ? "#171922" : "#f4f3f8";
-}
-setTheme(document.documentElement.dataset.theme !== "light");
-themeToggle.addEventListener("click", () => {
-  const dark = themeToggle.getAttribute("aria-pressed") !== "true";
-  setTheme(dark);
-  try { localStorage.setItem("routine-anchor-theme", dark ? "dark" : "light"); } catch { /* Optional preference storage. */ }
-});
-
 function renderRoutine() {
-  renderChecklist(checklistRoot);
   renderClock(currentState?.ts, mode === "replay");
-  renderFocus();
 }
 
-setupCompanion();
+setupMessages();
+setupProgress();
+setupCaregiverContact();
+setupLocationMap();
 document.getElementById("main").addEventListener("click", (event) => {
   const button = event.target.closest("[data-select-routine]");
   if (!button) return;
   selectRoutine(button.dataset.selectRoutine);
   renderRoutine();
-  announcement.textContent = document.getElementById("focus-title").textContent + ". " + document.getElementById("focus-description").textContent;
+  const selected = selectedRoutine();
+  announcement.textContent = selected.label + " at " + selected.time + ". " + routineStatus(selected) + ".";
 });
 
-function setTextSize(large) {
-  document.body.classList.toggle("large-text", large);
-  textSize.setAttribute("aria-pressed", String(large));
-}
-try { setTextSize(localStorage.getItem("routine-anchor-large-text") === "true"); } catch { /* Optional preference storage. */ }
-textSize.addEventListener("click", () => {
-  const large = textSize.getAttribute("aria-pressed") !== "true";
-  setTextSize(large);
-  try { localStorage.setItem("routine-anchor-large-text", String(large)); } catch { /* Continue without storage. */ }
-});
 replayToggle.addEventListener("click", toggleReplay);
 document.addEventListener("replay-status", ({ detail }) => {
   replayToggle.disabled = detail.complete;
@@ -78,12 +58,14 @@ document.addEventListener("mode-change", ({ detail }) => {
     eventLog.length = 0;
     currentState = null;
     resetChecklist();
+    resetReplayProgress();
     resetTimeline();
     renderRoutine();
     renderTimeline(timelineRoot);
     renderAlerts(alertsRoot, eventLog);
   }
   mode = detail.mode;
+  renderProgress(currentState?.ts, mode);
   const copy = {
     live: ["Your wristband is connected.", "Your reminders update here automatically."],
     connecting: ["Connecting to your wristband…", "Waiting for an update. Your caregiver can check the connection."],
@@ -110,10 +92,12 @@ registerStateListener((state) => {
     applyChecklistEvent({ type: "prompt_fired", detail: state.pendingPrompt });
   }
   renderRoutine();
+  renderProgress(currentState.ts, mode);
   updateDate();
 });
 
 registerEventListener((event) => {
+  recordProgressEvent(event, mode);
   if (["wander", "wear_off", "prompt_missed"].includes(event.type)) {
     eventLog.unshift(event);
     if (eventLog.length > 50) eventLog.pop();
@@ -131,6 +115,7 @@ registerEventListener((event) => {
   addTimelineEvent(event);
   renderAlerts(alertsRoot, eventLog);
   renderRoutine();
+  renderProgress(currentState?.ts, mode);
   updateDate();
   renderTimeline(timelineRoot);
   const promptMessages = {
@@ -142,6 +127,7 @@ registerEventListener((event) => {
 });
 
 renderRoutine();
+renderProgress(null, mode);
 renderTimeline(timelineRoot);
 renderAlerts(alertsRoot, eventLog);
 bootApi();

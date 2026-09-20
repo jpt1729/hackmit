@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-// Placeholder config for the Routine Anchor build spec.
+// Placeholder config for the Granny Nanny build spec.
 #define WIFI_SSID "your_wifi"
 #define WIFI_PASSWORD "your_password"
 

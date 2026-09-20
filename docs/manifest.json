@@ -1,12 +1,12 @@
 {
-  "name": "Routine Anchor",
-  "short_name": "Routine Anchor",
-  "description": "Gentle daily reminders and a familiar routine, with Pip by your side.",
+  "name": "Granny Nanny",
+  "short_name": "Granny Nanny",
+  "description": "Gentle daily reminders and voice messages between patient and caregiver.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#171922",
-  "theme_color": "#171922",
+  "background_color": "#f6f5f0",
+  "theme_color": "#f6f5f0",
   "icons": [
     {
       "src": "icons/app-icon.svg",

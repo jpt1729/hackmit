@@ -1,14 +1,19 @@
-const CACHE_NAME = "routine-anchor-v5";
+const CACHE_NAME = "routine-anchor-v46";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./css/style.css",
+  "./vendor/leaflet/leaflet.css",
+  "./vendor/leaflet/leaflet.js",
   "./js/app.js",
   "./js/alerts.js",
   "./js/api.js",
   "./js/checklist.js",
   "./js/clock.js",
-  "./js/companion.js",
+  "./js/progress.js",
+  "./js/contact.js",
+  "./js/location-map.js",
+  "./js/messages.js",
   "./js/timeline.js",
   "./data/demo.json",
   "./manifest.json",
@@ -30,11 +35,16 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
-  if (event.request.method !== "GET" || !event.request.url.startsWith(self.location.origin)) {
+  const url = new URL(event.request.url);
+  if (event.request.method !== "GET" || url.origin !== self.location.origin || url.pathname.startsWith("/api/")) {
     return;
   }
 
   event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request))
+    fetch(event.request, { cache: "no-cache" }).catch(async (error) => {
+      const cached = await caches.match(event.request);
+      if (cached) return cached;
+      throw error;
+    })
   );
 });
