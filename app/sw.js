@@ -1,4 +1,4 @@
-const CACHE_NAME = "routine-anchor-v131";
+const CACHE_NAME = "routine-anchor-v132";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -20,6 +20,7 @@ const APP_SHELL = [
   "./js/progress.js",
   "./js/location-map.js",
   "./js/messages.js",
+  "./js/local-messages.js",
   "./js/timeline.js",
   "./data/demo.json",
   "./manifest.json",

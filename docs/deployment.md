@@ -36,7 +36,11 @@ When merging this folder migration:
 
 The `github-pages` deployment environment must permit `main`. These are repository settings; adding the workflow locally does not change them. See [GitHub’s custom Pages workflow documentation](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages).
 
-Pages serves the static website and replay data. It does not run `tools/message_server.py`, store voice recordings, or provide access to a bracelet on a private home network.
+Pages serves the static website and replay data. On `*.github.io`, messages use a browser-only demo: text and audio are saved in IndexedDB on the current device, and recordings remain playable after reload. No message API is needed. These messages are not delivered to another person or synchronized between devices. Clearing site data removes them.
+
+For the same demo on another static host or localhost, add `?messages=local` (or `&messages=local` alongside other parameters). The local Python server continues to provide server-backed messaging when this option is absent.
+
+Pages does not run `tools/message_server.py` or provide access to a bracelet on a private home network.
 
 ## Other hosting
 

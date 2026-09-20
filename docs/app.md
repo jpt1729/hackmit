@@ -37,3 +37,7 @@ ESP32 wearable for people with dementia/TBI. Gentle haptic prompts tied to time 
 ## Wristband section
 
 The Wristband toolbar item scrolls to the section after Routine Editor and before Location. It contains the light ring reported by the device, routine synchronization controls, and OLED notes. The ring uses wristband `tasksDone` / `tasksTotal`, including during recorded demos; browser-only manual status changes do not fabricate device progress. Fall alerts and live device actions remain available.
+
+## Browser-only messaging demo
+
+On GitHub Pages, text messages and voice recordings are saved in this browser using IndexedDB. Recordings can be replayed after reloading; text-only messages have no audio control. A small “Demo · this browser only” label distinguishes this from delivery to another person. Use `?messages=local` to enable this mode on other hosts. Browser messages are separate from the Python server database and are removed if site data is cleared.

@@ -186,6 +186,7 @@ button { cursor: pointer; }
 .message-card audio, #message-preview-audio { width: 100%; min-width: 0; max-width: 100%; }
 .message-card p { overflow-wrap: anywhere; }
 .message-compose { display: grid; gap: 0.6rem; margin-top: 0.6rem; }
+.message-demo-note { margin: 0; color: var(--muted); font-size: 0.75rem; text-align: right; }
 .message-compose > p { color: var(--muted); font-size: 0.85em; }
 .message-compose > button { justify-self: start; }
 #message-preview { display: grid; gap: 0.6rem; min-width: 0; padding: 0.7rem; border: 1px solid var(--border); border-radius: 10px; background: var(--panel); }
