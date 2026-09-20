@@ -33,6 +33,18 @@
 #define PIN_GPS_TX    17   // ESP32 TX2  -> GT-U7 RX (config only; unused in normal operation)
 
 // ---------------------------------------------------------------- activity (MPU-6050)
+// DLPF_CFG for register 0x1A. 3 = 44 Hz accelerometer bandwidth: low enough to
+// bury the sensor's high-frequency noise (the 260 Hz default reads noisier than
+// WEAR_MICRO_G even on a dead-still bench), wide enough that a fall's impact
+// spike still arrives at full height for FALL_IMPACT_G.
+#define MPU_DLPF_CFG        3
+// ACCEL_CONFIG (0x1C) AFS_SEL, and the matching LSB/g divisor. The reset default
+// is AFS_SEL 0, +-2 g, which saturates at 2.0 g - *below* FALL_IMPACT_G (2.20).
+// An impact could never be reported at that range and the fall ladder could
+// never open. +-4 g clears the threshold with headroom and still leaves plenty
+// of resolution for WEAR_MICRO_G, which is the finer measurement of the two.
+#define MPU_ACCEL_FS_SEL    1
+#define MPU_LSB_PER_G       8192.0f
 #define ACT_SAMPLE_HZ       10
 #define ACT_EMA_ALPHA       0.1f
 #define MOVE_THRESH_G       0.06f

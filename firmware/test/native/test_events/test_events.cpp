@@ -48,7 +48,8 @@ void test_long_strings_are_truncated_not_overflowed() {
   std::string detail(PROMPT_ID_LEN + 20, 'd');
   addEvent("a_type_that_is_way_too_long", detail.c_str());
   std::string j = eventsJson();
-  TEST_ASSERT_NOT_EQUAL(std::string::npos, j.find("\"type\":\"a_type_that_is_\""));   // 15 chars
+  TEST_ASSERT_NOT_EQUAL(std::string::npos,
+                        j.find("\"type\":\"a_type_that_is_way_too_\""));   // 23 chars
   TEST_ASSERT_NOT_EQUAL(std::string::npos,
                         j.find("\"detail\":\"" + std::string(PROMPT_ID_LEN - 1, 'd') + "\""));
 }

@@ -8,7 +8,9 @@
 struct Event {
   uint32_t id;
   time_t   ts;
-  char     type[16];
+  // Longest name in use is "message_received" (16 chars), which needs 17 with
+  // the NUL. 24 leaves room before the next name has to be audited against it.
+  char     type[24];
   // Wide enough for a prompt id: the dashboard mints `custom_<uuid>` ids for
   // activities a caregiver adds, and a truncated one never matches back.
   char     detail[PROMPT_ID_LEN];

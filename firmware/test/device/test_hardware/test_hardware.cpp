@@ -80,11 +80,12 @@ void test_accel_reads_1g_at_rest() {
   uint8_t b[6];
   TEST_ASSERT_EQUAL(6, mpuRead(0x3B, b, 6));
   float g[3];
-  for (int i = 0; i < 3; i++) g[i] = (int16_t)((b[2 * i] << 8) | b[2 * i + 1]) / 16384.0f;
+  for (int i = 0; i < 3; i++) g[i] = (int16_t)((b[2 * i] << 8) | b[2 * i + 1]) / MPU_LSB_PER_G;
   float mag = sqrtf(g[0] * g[0] + g[1] * g[1] + g[2] * g[2]);
   SAY("accel x=%.2f y=%.2f z=%.2f |a|=%.2f g", g[0], g[1], g[2], mag);
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15f, 1.0f, mag,
-      "|a| should be ~1g lying still. 0 = IMU still asleep; ~0.5/2 = wrong range/scale");
+      "|a| should be ~1g lying still. 0 = IMU still asleep; ~0.5/2 = MPU_ACCEL_FS_SEL "
+      "and MPU_LSB_PER_G disagree");
 }
 
 void test_activity_resting_on_bench() {
@@ -105,7 +106,9 @@ void test_imu_noise_floor_is_below_the_wear_threshold() {
     if (activityMotion() > peak) peak = activityMotion();
   }
   SAY("still-on-bench motion peaks at %.4f g (WEAR_MICRO_G = %.4f)", peak, WEAR_MICRO_G);
-  TEST_ASSERT_LESS_THAN_MESSAGE(WEAR_MICRO_G, peak,
+  // TEST_ASSERT_LESS_THAN is Unity's *integer* compare: it truncated both
+  // WEAR_MICRO_G (0.012f) and peak to 0 and failed as "0 < 0" on any board.
+  TEST_ASSERT_LESS_THAN_FLOAT_MESSAGE(WEAR_MICRO_G, peak,
       "This board's IMU is noisier than WEAR_MICRO_G: raise it or wear_off never fires");
 }
 

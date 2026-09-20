@@ -24,6 +24,12 @@ static uint32_t freefallAtMs = 0;
 static uint32_t impactAtMs = 0;
 static uint32_t fallRearmMs = 0;
 static bool     fallFlag = false;
+// Stillness after the impact is measured on its own average, started fresh once
+// the settle window closes. The main `ema` still has the impact spike decaying
+// out of it for seconds afterwards and would read as "moving" every time.
+static bool     fallSettled = false;
+static float    fallStillEma = 0.0f;
+static uint32_t fallStillSinceMs = 0;
 
 static bool readAccelMagnitude(float& mag) {
   Wire.beginTransmission(MPU_ADDR);
@@ -33,7 +39,7 @@ static bool readAccelMagnitude(float& mag) {
   for (int i = 0; i < 3; i++) {
     int hi = Wire.read();
     int lo = Wire.read();
-    float g = (int16_t)((hi << 8) | lo) / 16384.0f;
+    float g = (int16_t)((hi << 8) | lo) / MPU_LSB_PER_G;
     sumSq += g * g;
   }
   mag = sqrtf(sumSq);
@@ -59,14 +65,39 @@ void activityInit() {
   impactAtMs = 0;
   fallRearmMs = 0;
   fallFlag = false;
+  fallSettled = false;
+  fallStillEma = 0.0f;
+  fallStillSinceMs = 0;
   stillSinceMs = millis();
 
   Wire.begin(PIN_SDA, PIN_SCL);
+  delay(10);            // the bus needs a moment before the first transaction
+
+  // PWR_MGMT_1: clear SLEEP. The chip boots asleep and ACKs nothing useful.
   Wire.beginTransmission(MPU_ADDR);
   Wire.write(0x6B);
   Wire.write(0x00);
   imuOk = Wire.endTransmission() == 0;
-  if (!imuOk) Serial.println("[activity] MPU6050 not found");
+  if (!imuOk) {
+    Serial.println("[activity] MPU6050 not found");
+    return;
+  }
+
+  // CONFIG: set the digital low-pass filter. Reset leaves DLPF_CFG = 0, which
+  // is a 260 Hz bandwidth - every bit of high-frequency noise reaches us, and
+  // the resting noise floor then sits above WEAR_MICRO_G, so wear_off never
+  // fires. MPU_DLPF_CFG stays wide enough to pass a fall's impact transient.
+  Wire.beginTransmission(MPU_ADDR);
+  Wire.write(0x1A);
+  Wire.write(MPU_DLPF_CFG);
+  Wire.endTransmission();
+
+  // ACCEL_CONFIG: set the full-scale range. MPU_LSB_PER_G in readAccelMagnitude()
+  // has to match this or every reading is scaled wrong.
+  Wire.beginTransmission(MPU_ADDR);
+  Wire.write(0x1C);
+  Wire.write(MPU_ACCEL_FS_SEL << 3);
+  Wire.endTransmission();
 }
 
 void activityTick() {
@@ -105,12 +136,24 @@ void activityTick() {
   if (impactAtMs) {
     uint32_t sinceImpact = now - impactAtMs;
     if (sinceImpact >= FALL_SETTLE_MS) {
-      if (ema > FALL_STILL_G) {
-        impactAtMs = 0;
-      } else if (sinceImpact >= FALL_SETTLE_MS + FALL_STILL_MS) {
-        impactAtMs = 0;
-        fallRearmMs = now;
-        fallFlag = true;
+      if (!fallSettled) {
+        // The spike has had FALL_SETTLE_MS to pass. Start the stillness average
+        // from zero here: seeded with `ema` it would begin above FALL_STILL_G
+        // and clear every candidate before it could ever confirm.
+        fallSettled = true;
+        fallStillEma = 0.0f;
+        fallStillSinceMs = now;
+      } else {
+        fallStillEma += (fabsf(mag - 1.0f) - fallStillEma) * ACT_EMA_ALPHA;
+        if (fallStillEma > FALL_STILL_G) {
+          impactAtMs = 0;              // they got up: not hurt
+          fallSettled = false;
+        } else if (now - fallStillSinceMs >= FALL_STILL_MS) {
+          impactAtMs = 0;
+          fallSettled = false;
+          fallRearmMs = now;
+          fallFlag = true;
+        }
       }
     }
   }

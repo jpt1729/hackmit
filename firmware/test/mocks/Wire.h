@@ -2,6 +2,7 @@
 // Fake I2C bus with a fake MPU-6050 behind it. Tests set mock::imuPresent and
 // mock::accel{X,Y,Z} (in g); reads of ACCEL_XOUT_H return those as raw counts.
 #include "Arduino.h"
+#include "config.h"
 
 namespace mock {
 inline bool  imuPresent = true;
@@ -22,7 +23,10 @@ class TwoWire {
     const float g[3] = {mock::accelX, mock::accelY, mock::accelZ};
     len_ = 0;
     for (int i = 0; i < 3; i++) {
-      float c = g[i] * 16384.0f;                       // +/-2g range, saturates
+      // Saturates exactly like the real part: the configured full-scale range
+      // is the most any axis can ever report, which is why FALL_IMPACT_G has
+      // to sit below it.
+      float c = g[i] * MPU_LSB_PER_G;
       int16_t raw = c > 32767 ? 32767 : (c < -32768 ? -32768 : (int16_t)c);
       buf_[len_++] = (uint8_t)((uint16_t)raw >> 8);
       buf_[len_++] = (uint8_t)(raw & 0xFF);
