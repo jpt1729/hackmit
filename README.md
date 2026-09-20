@@ -10,7 +10,7 @@ From the repository root, run:
 python3 tools/message_server.py
 ```
 
-Open [Brain Buddy](http://127.0.0.1:8787/). The app is a caregiver dashboard with **Message / Routine / Map / Notices** navigation. To connect a bracelet on your local network, open `http://127.0.0.1:8787/?device=ESP32_IP`.
+Open [Brain Buddy](http://127.0.0.1:8787/). The app is a caregiver dashboard with **Messages / Routine / Location / Updates** navigation. To connect a bracelet on your local network, open `http://127.0.0.1:8787/?device=ESP32_IP`.
 
 Python 3 is the only server dependency. The website uses plain HTML, CSS, and JavaScript, with no frontend build step. Voice recordings and transcripts are stored in `var/voice_messages.sqlite3`; routine edits are saved in the browser.
 

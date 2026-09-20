@@ -1,8 +1,10 @@
-const CACHE_NAME = "routine-anchor-v65";
+const CACHE_NAME = "routine-anchor-v129";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./css/style.css",
+  "./fonts/open-sans/open-sans-latin.woff2",
+  "./fonts/open-sans/open-sans-latin-ext.woff2",
   "./vendor/leaflet/leaflet.css",
   "./vendor/leaflet/leaflet.js",
   "./js/app.js",
@@ -17,7 +19,11 @@ const APP_SHELL = [
   "./js/timeline.js",
   "./data/demo.json",
   "./manifest.json",
+  "./favicon.ico",
   "./icons/app-icon.svg",
+  "./icons/app-icon-192.png",
+  "./icons/app-icon-512.png",
+  "./icons/apple-touch-icon.png",
   "./icons/brainbuddy.png"
 ];
 

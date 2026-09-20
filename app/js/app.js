@@ -1,11 +1,11 @@
 import { bootApi, registerStateListener, registerEventListener } from "./api.js";
-import { applyChecklistEvent, resetChecklist, routineLabel, routineStatus, selectedRoutine, selectRoutine, setRoutineTime } from "./checklist.js";
+import { applyChecklistEvent, resetChecklist, routineLabel, routineStatus, selectedRoutine, selectRoutine } from "./checklist.js";
 import { renderClock } from "./clock.js";
 import { setupMessages } from "./messages.js";
 import { addTimelineEvent, setTimelineState, renderTimeline, resetTimeline } from "./timeline.js";
 import { renderAlerts } from "./alerts.js";
 import { setupProgress, recordProgressEvent, renderProgress, resetReplayProgress } from "./progress.js";
-import { setupRoutineEditor } from "./routine-editor.js";
+import { setupRoutineEditor, openRoutineEditor } from "./routine-editor.js";
 import { setupLocationMap } from "./location-map.js";
 
 const timelineRoot = document.getElementById("timeline");
@@ -17,16 +17,31 @@ const announcement = document.getElementById("routine-announcement");
 const eventLog = [];
 let mode = "";
 let currentState = null;
+let clockTimer = null;
 
 function renderRoutine() {
-  renderClock(currentState?.ts, mode === "replay");
+  renderClock();
 }
+
+function syncClock() {
+  window.clearTimeout(clockTimer);
+  renderRoutine();
+  renderProgress(currentState?.ts, mode);
+  // Refresh at each local minute boundary, even without wristband updates.
+  clockTimer = window.setTimeout(syncClock, 60_000 - Date.now() % 60_000);
+}
+
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) syncClock();
+});
+window.addEventListener("pageshow", syncClock);
 
 setupProgress();
 setupMessages();
 setupLocationMap();
 setupRoutineEditor();
 document.addEventListener("routine-change", renderRoutine);
+document.addEventListener("routine-change", () => renderProgress(currentState?.ts, mode));
 document.getElementById("main").addEventListener("click", (event) => {
   const button = event.target.closest("[data-select-routine]");
   if (!button) return;
@@ -35,6 +50,7 @@ document.getElementById("main").addEventListener("click", (event) => {
   const selected = selectedRoutine();
   if (!selected) return;
   announcement.textContent = selected.label + " at " + selected.time + ". " + routineStatus(selected) + ".";
+  openRoutineEditor(selected.id);
 });
 
 document.addEventListener("mode-change", ({ detail }) => {
@@ -62,12 +78,11 @@ document.addEventListener("mode-change", ({ detail }) => {
     modeBanner.textContent = title;
     modeDescription.textContent = description;
   }
-  renderClock(currentState?.ts, mode === "replay");
+  renderRoutine();
 });
 
 registerStateListener((state) => {
   currentState = { ...state };
-  setRoutineTime(state.ts);
   setTimelineState(currentState);
   renderTimeline(timelineRoot);
   if (state.pendingPrompt) {
@@ -86,7 +101,6 @@ registerEventListener((event) => {
   // Replay has only an initial snapshot, so apply recorded changes to that snapshot.
   if (mode === "replay" && currentState) {
     currentState.ts = event.ts;
-    setRoutineTime(event.ts);
     if (event.type === "room_change") currentState.room = event.detail;
     if (event.type === "wear_on") currentState.worn = true;
     if (event.type === "wear_off") currentState.worn = false;
@@ -106,7 +120,7 @@ registerEventListener((event) => {
   if (promptMessages[event.type]) announcement.textContent = routineLabel(event.detail) + ". " + promptMessages[event.type];
 });
 
-renderRoutine();
+syncClock();
 renderProgress(null, mode);
 renderTimeline(timelineRoot);
 renderAlerts(alertsRoot, eventLog);
