@@ -1,7 +1,7 @@
 {
   "name": "Brain Buddy",
   "short_name": "Brain Buddy",
-  "description": "Gentle daily reminders and voice messages between patient and caregiver.",
+  "description": "Caregiver routines, messages, bracelet location, and notices.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

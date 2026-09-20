@@ -48,7 +48,7 @@ function staleFix() {
 }
 
 function renderMap() {
-  // Hidden patient views do not load street tiles or initialize a zero-size map.
+  // Wait until the map has a layout before initializing its viewport.
   if (!mapRoot.getClientRects().length) return;
   if (!window.L) {
     mapError.hidden = false;
