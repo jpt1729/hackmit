@@ -1,5 +1,6 @@
 #include <unity.h>
 #include "events.h"
+#include "schedule.h"
 #include "test_support.h"
 
 DeviceState g_state;
@@ -44,10 +45,21 @@ void test_null_detail_becomes_empty_string() {
 }
 
 void test_long_strings_are_truncated_not_overflowed() {
-  addEvent("a_type_that_is_way_too_long", "a_detail_string_that_is_much_longer_than_24");
+  std::string detail(PROMPT_ID_LEN + 20, 'd');
+  addEvent("a_type_that_is_way_too_long", detail.c_str());
   std::string j = eventsJson();
-  TEST_ASSERT_NOT_EQUAL(std::string::npos, j.find("\"type\":\"a_type_that_is_\""));      // 15 chars
-  TEST_ASSERT_NOT_EQUAL(std::string::npos, j.find("\"detail\":\"a_detail_string_that_is\""));  // 23 chars
+  TEST_ASSERT_NOT_EQUAL(std::string::npos, j.find("\"type\":\"a_type_that_is_\""));   // 15 chars
+  TEST_ASSERT_NOT_EQUAL(std::string::npos,
+                        j.find("\"detail\":\"" + std::string(PROMPT_ID_LEN - 1, 'd') + "\""));
+}
+
+// A prompt id has to survive the round trip to the dashboard intact: an event
+// carrying a cut-off id matches no activity on the routine.
+void test_a_full_length_prompt_id_is_not_truncated() {
+  const char* id = "custom_f81d4fae-7dec-11d0-a765-00a0c91e6bf6";
+  addEvent("prompt_acked", id);
+  TEST_ASSERT_NOT_EQUAL(std::string::npos,
+                        eventsJson().find(std::string("\"detail\":\"") + id + "\""));
 }
 
 void test_every_contract_event_type_fits_unchanged() {
@@ -93,6 +105,7 @@ int main() {
   RUN_TEST(test_since_filters_older_events);
   RUN_TEST(test_null_detail_becomes_empty_string);
   RUN_TEST(test_long_strings_are_truncated_not_overflowed);
+  RUN_TEST(test_a_full_length_prompt_id_is_not_truncated);
   RUN_TEST(test_every_contract_event_type_fits_unchanged);
   RUN_TEST(test_ring_buffer_keeps_newest_200);
   RUN_TEST(test_since_works_across_wraparound);

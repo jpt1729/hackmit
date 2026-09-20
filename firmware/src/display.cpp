@@ -1,5 +1,6 @@
 #include "display.h"
 #include "config.h"
+#include "schedule.h"
 #include "gps.h"
 
 #if ENABLE_DISPLAY
@@ -109,7 +110,7 @@ void displayTick() {
   if (p >= 0) {
     oled.setTextSize(2);
     oled.setCursor(0, 0);
-    printWrapped(SCHEDULE[p].label, 10);
+    printWrapped(scheduleAt(p).label, 10);
     drawCentered("Shake to confirm", 1, 56);
   } else if (flashing) {
     drawCentered(flashText, strlen(flashText) > 8 ? 2 : 3, 24);

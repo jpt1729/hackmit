@@ -258,3 +258,13 @@ button { cursor: pointer; }
 .routine-editor-icon svg { width: 27px; height: 27px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .routine-remove { color: var(--missed-bg); background: var(--panel); font-size: 0.85em; flex-shrink: 0; }
 @media (max-width: 600px) { .routine-form { grid-template-columns: minmax(0, 1fr); } }
+
+/* Routine sync and the wristband controls in the notices panel. */
+.routine-sync { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; padding: 0.85rem 1rem; border: 1px solid var(--subtle-border); border-radius: 12px; background: var(--panel-raised); margin-top: 0.8rem; }
+.routine-sync-status { flex: 1; min-width: 12rem; margin: 0; color: var(--muted); font-size: 0.85em; }
+.routine-sync-status[data-kind="ok"] { color: var(--success-ink); font-weight: 600; }
+.routine-sync-status[data-kind="warn"] { color: var(--warn-ink); font-weight: 600; }
+.alert-action-card { border-left-color: var(--accent); background: var(--soft); color: var(--ink); }
+.alert-action-card .alert-action { margin-top: 0.7rem; }
+.alert-action-result:empty { display: none; }
+.alert-action-result { margin: 0.6rem 0 0; font-size: 0.9em; font-weight: 600; }

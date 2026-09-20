@@ -3,11 +3,12 @@ import { applyChecklistEvent, resetChecklist, routineLabel, routineStatus, selec
 import { renderClock } from "./clock.js";
 import { setupMessages } from "./messages.js";
 import { addTimelineEvent, setTimelineState, renderTimeline, resetTimeline } from "./timeline.js";
-import { renderAlerts } from "./alerts.js";
+import { renderAlerts, NOTICE_TYPES } from "./alerts.js";
 import { setupProgress, recordProgressEvent, renderProgress, resetReplayProgress } from "./progress.js";
 import { setupCaregiverContact } from "./contact.js";
 import { setupRoutineEditor } from "./routine-editor.js";
 import { setupLocationMap } from "./location-map.js";
+import { setupDevice } from "./device.js";
 
 const timelineRoot = document.getElementById("timeline");
 const alertsRoot = document.getElementById("alerts");
@@ -24,8 +25,15 @@ function renderRoutine() {
   renderClock(currentState?.ts, mode === "replay");
 }
 
+// The notices panel carries live wristband controls, so it has to be redrawn
+// when the connection changes, not only when an event arrives.
+function showAlerts() {
+  renderAlerts(alertsRoot, eventLog, currentState, mode === "live");
+}
+
 setupMessages();
 setupProgress();
+setupDevice();
 setupCaregiverContact();
 setupLocationMap();
 setupRoutineEditor();
@@ -56,9 +64,9 @@ document.addEventListener("mode-change", ({ detail }) => {
     resetTimeline();
     renderRoutine();
     renderTimeline(timelineRoot);
-    renderAlerts(alertsRoot, eventLog);
   }
   mode = detail.mode;
+  showAlerts();
   renderProgress(currentState?.ts, mode);
   const copy = {
     live: ["Your wristband is connected.", "Your reminders update here automatically."],
@@ -84,6 +92,7 @@ registerStateListener((state) => {
   if (state.pendingPrompt) {
     applyChecklistEvent({ type: "prompt_fired", detail: state.pendingPrompt });
   }
+  showAlerts();
   renderRoutine();
   renderProgress(currentState.ts, mode);
   updateDate();
@@ -91,7 +100,7 @@ registerStateListener((state) => {
 
 registerEventListener((event) => {
   recordProgressEvent(event, mode);
-  if (["wander", "wear_off", "prompt_missed"].includes(event.type)) {
+  if (NOTICE_TYPES.includes(event.type)) {
     eventLog.unshift(event);
     if (eventLog.length > 50) eventLog.pop();
   }
@@ -106,7 +115,7 @@ registerEventListener((event) => {
   }
   applyChecklistEvent(event);
   addTimelineEvent(event);
-  renderAlerts(alertsRoot, eventLog);
+  showAlerts();
   renderRoutine();
   renderProgress(currentState?.ts, mode);
   updateDate();
@@ -122,7 +131,7 @@ registerEventListener((event) => {
 renderRoutine();
 renderProgress(null, mode);
 renderTimeline(timelineRoot);
-renderAlerts(alertsRoot, eventLog);
+showAlerts();
 bootApi();
 
 if ("serviceWorker" in navigator) {

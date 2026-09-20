@@ -3,6 +3,26 @@
 #include "events.h"
 #include <WiFi.h>
 
+// The raw APs the band can hear right now. Lives outside the ENABLE_LOCATION
+// guard: training a room table is a setup step that has to work before room
+// tracking is switched on.
+static String scanJson() {
+  int n = WiFi.scanNetworks(false, true);   // blocking, include hidden APs
+  String out;
+  out.reserve(128 + (n > 0 ? n : 0) * 80);
+  out = "{\"aps\":[";
+  for (int i = 0; i < n; i++) {
+    char item[128];
+    snprintf(item, sizeof(item), "%s{\"bssid\":\"%s\",\"rssi\":%d,\"ssid\":\"%s\",\"channel\":%d}",
+             i ? "," : "", WiFi.BSSIDstr(i).c_str(), (int)WiFi.RSSI(i),
+             WiFi.SSID(i).c_str(), (int)WiFi.channel(i));
+    out += item;
+  }
+  out += "]}";
+  WiFi.scanDelete();
+  return out;
+}
+
 #if ENABLE_LOCATION
 
 static uint32_t lastScanStartMs = 0;
@@ -85,9 +105,25 @@ void locationTick() {
   }
 }
 
+String locationScanJson() {
+  // A blocking scan cannot run alongside the async one this module drives, so
+  // drop whatever is in flight and let locationTick() start a fresh one after.
+  if (scanning) {
+    WiFi.scanDelete();
+    scanning = false;
+  }
+  String out = scanJson();
+  lastScanStartMs = millis();
+  return out;
+}
+
 #else
 
 void locationInit() {}
 void locationTick() {}
+
+// Room tracking is compiled out, but the radio still works, so a caregiver
+// can train the room table first and turn the feature on afterwards.
+String locationScanJson() { return scanJson(); }
 
 #endif

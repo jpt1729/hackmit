@@ -8,6 +8,9 @@ let replayTimer = null;
 let replayPaused = false;
 let replayEvents = [];
 let replayIndex = 0;
+let liveHost = "";
+let lastClockSyncMs = 0;
+let clockSyncInFlight = false;
 
 function replayStatus(complete = false) {
   document.dispatchEvent(new CustomEvent("replay-status", { detail: { paused: replayPaused, complete } }));
@@ -42,9 +45,56 @@ async function fetchJson(url) {
   return response.json();
 }
 
+// The write half of the device contract. Everything above this line reads the
+// wristband; these are the four things the dashboard can ask it to do.
+function deviceOnline() { return Boolean(liveHost); }
+
+async function deviceCommand(path, { params, body } = {}) {
+  if (!liveHost) throw new Error("The wristband is not connected.");
+  const query = params ? `?${new URLSearchParams(params)}` : "";
+  const response = await fetch(`http://${liveHost}${path}${query}`, {
+    method: "POST",
+    cache: "no-store",
+    ...(body === undefined ? {} : { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+  });
+  // The firmware answers with JSON on every path, including its errors.
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.error || `The wristband could not do that (${response.status}).`);
+  return payload;
+}
+
+async function deviceSchedule() {
+  if (!liveHost) throw new Error("The wristband is not connected.");
+  return fetchJson(`http://${liveHost}/schedule`);
+}
+
+// The ESP32 has no battery-backed clock. Until something hands it the time its
+// timeValid() gate stays shut and not one scheduled reminder fires - the band
+// looks alive and quietly does nothing. The dashboard is the only thing on the
+// network that reliably knows what time it is, so it is the one that tells it.
+async function syncClock(state) {
+  const now = Math.floor(Date.now() / 1000);
+  const deviceTs = Number(state?.ts);
+  const clockLooksRight = deviceTs > 1700000000 && Math.abs(deviceTs - now) < 120;
+  if (clockLooksRight || clockSyncInFlight) return;
+  // A device that keeps refusing should not be asked every three seconds.
+  if (lastClockSyncMs && Date.now() - lastClockSyncMs < 60000) return;
+  clockSyncInFlight = true;
+  lastClockSyncMs = Date.now();
+  try {
+    await deviceCommand("/time", { params: { epoch: Math.floor(Date.now() / 1000) } });
+    document.dispatchEvent(new CustomEvent("device-clock-set", { detail: { drift: deviceTs - now } }));
+  } catch (error) {
+    console.warn("Could not set the wristband clock:", error);
+  } finally {
+    clockSyncInFlight = false;
+  }
+}
+
 async function startReplayMode() {
   if (replayStarted) return;
   replayStarted = true;
+  liveHost = "";              // recorded data takes no commands
   setMode("replay");
   try {
     const payload = await fetchJson("data/demo.json");
@@ -63,6 +113,7 @@ async function pollLiveMode(deviceHost) {
   polling = true;
   try {
     const state = await fetchJson(`http://${deviceHost}/state`);
+    liveHost = deviceHost;    // reachable: commands may be sent from here on
     const payload = await fetchJson(`http://${deviceHost}/events?since=${lastEventId}`);
     const events = Array.isArray(payload.events) ? payload.events : [];
     notifyState(state);
@@ -74,11 +125,14 @@ async function pollLiveMode(deviceHost) {
     });
     failures = 0;
     setMode("live", deviceHost);
+    await syncClock(state);
   } catch (error) {
     failures += 1;
     console.warn("Device poll failed:", error);
-    if (failures >= 3) startReplayMode();
-    else setMode("connecting", deviceHost);
+    if (failures >= 3) {
+      liveHost = "";
+      startReplayMode();
+    } else setMode("connecting", deviceHost);
   } finally {
     polling = false;
   }
@@ -96,4 +150,5 @@ function bootApi() {
   window.setInterval(() => pollLiveMode(deviceHost), 3000);
 }
 
-export { bootApi, registerStateListener, registerEventListener, toggleReplay };
+export { bootApi, registerStateListener, registerEventListener, toggleReplay,
+  deviceCommand, deviceSchedule, deviceOnline };

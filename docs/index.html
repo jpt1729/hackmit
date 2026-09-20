@@ -140,7 +140,7 @@
         <div class="caregiver-content">
           <section aria-labelledby="routine-editor-title">
             <h2 id="routine-editor-title">Edit routine bubbles</h2>
-            <p class="contact-help">Add an activity or remove one below. Changes are saved in this browser and appear in Patient view. Wristband reminders are configured separately.</p>
+            <p class="contact-help">Add an activity or remove one below. Changes are saved in this browser and sent to the wristband, so its reminders match this list.</p>
             <form id="routine-form" class="routine-form">
               <div><label for="routine-name">Activity name</label><input id="routine-name" type="text" maxlength="60" placeholder="e.g. Call a friend" required /></div>
               <div><label for="routine-time">Time</label><input id="routine-time" type="time" required /></div>
@@ -150,6 +150,10 @@
               <button class="button button-primary" type="submit">Add activity</button>
             </form>
             <p id="routine-editor-status" class="messages-status" role="status"></p>
+            <div class="routine-sync">
+              <p id="routine-sync-status" class="routine-sync-status" role="status">Waiting for the wristband before sending the routine.</p>
+              <button id="routine-sync-now" class="button button-secondary" type="button" disabled>Send routine to wristband</button>
+            </div>
             <ul id="routine-editor-list" class="routine-editor-list" aria-label="Activities in your routine"></ul>
           </section>
           <section aria-labelledby="alerts-title"><h2 id="alerts-title">Notices</h2><div id="alerts"></div></section>

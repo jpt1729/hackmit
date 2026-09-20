@@ -5,6 +5,7 @@
     python3 tools/test_device_http.py 192.168.1.42 --fire     # + POST /demo/fire (device buzzes)
     python3 tools/test_device_http.py 192.168.1.42 --set-time # + POST /time with this laptop's clock
     python3 tools/test_device_http.py 192.168.1.42 --soak 30  # + poll like the dashboard for 30 min
+    python3 tools/test_device_http.py 192.168.1.42 --schedule  # + push a routine and put the old one back
 
 Run it on the same network the demo will use (phone hotspot), from the laptop
 that will run the dashboard: it also proves client isolation isn't in the way.
@@ -19,8 +20,11 @@ import urllib.error
 import urllib.request
 
 sys.path.insert(0, __import__("os").path.dirname(__file__))
-from contract import firmware_schedule_ids, validate_events, validate_state  # noqa: E402
+from contract import (firmware_schedule_ids, validate_events,  # noqa: E402
+                      validate_scan, validate_schedule, validate_state)
 
+# The ids the band is actually running, which is whatever the dashboard last
+# pushed. Falls back to the firmware defaults if /schedule cannot be read.
 SCHEDULE_IDS = set(firmware_schedule_ids())
 failures = 0
 
@@ -33,10 +37,13 @@ def report(name, errs):
     failures += bool(errs)
 
 
-def request(base, method, path, timeout=5.0):
+def request(base, method, path, timeout=5.0, body=None):
     """Return (status, headers, body_text, seconds). Never raises on HTTP errors."""
-    req = urllib.request.Request(base + path, method=method,
-                                 headers={"Origin": "http://localhost:8000"})
+    headers = {"Origin": "http://localhost:8000"}
+    if body is not None:
+        headers["Content-Type"] = "application/json"
+    req = urllib.request.Request(base + path, method=method, headers=headers,
+                                 data=body.encode() if body is not None else None)
     t0 = time.monotonic()
     try:
         with urllib.request.urlopen(req, timeout=timeout) as r:
@@ -98,9 +105,78 @@ def check_events(base):
     return last
 
 
+def check_schedule(base, push=False):
+    """The routine the dashboard pushes to the band, and reads back."""
+    global SCHEDULE_IDS
+    status, headers, body, _ = get_json(base, "/schedule")
+    errs = ([] if status == 200 else [f"status {status}"]) + cors_errs(headers)
+    errs += validate_schedule(body)
+    report(f"GET /schedule matches contract ({len(body.get('items', []))} reminders, "
+           f"source {body.get('source')!r})", errs)
+    if not errs:
+        SCHEDULE_IDS = {item["id"] for item in body["items"]}
+
+    # A malformed routine must be refused whole: a band running half of an old
+    # routine and half of a new one is worse than one that ignored the push.
+    before = json.dumps(body.get("items"))
+    status, _, reply, _ = request(base, "POST", "/schedule",
+                                  body='{"items":[{"id":"bad","label":"Bad","hour":99,"minute":0}]}')
+    _, _, after, _ = get_json(base, "/schedule")
+    errs = [] if status == 400 else [f"a routine with hour=99 got status {status}, want 400"]
+    try:
+        if not json.loads(reply).get("error"):
+            errs.append(f"the refusal gave no reason: {reply!r}")
+    except ValueError:
+        errs.append(f"the refusal is not JSON: {reply!r}")
+    if json.dumps(after.get("items")) != before:
+        errs.append("a refused routine still changed what the band is running")
+    report("POST /schedule refuses a bad routine and keeps the old one", errs)
+
+    if not push:
+        return
+    # Round trip a real routine, then put back whatever was there before.
+    sent = [{"id": "contract_test", "label": "Contract test", "hour": 6, "minute": 5}]
+    status, _, reply, _ = request(base, "POST", "/schedule", body=json.dumps({"items": sent}))
+    _, _, after, _ = get_json(base, "/schedule")
+    errs = [] if status == 200 else [f"status {status}: {reply}"]
+    errs += validate_schedule(after)
+    if [i["id"] for i in after.get("items", [])] != ["contract_test"]:
+        errs.append(f"the band is running {[i.get('id') for i in after.get('items', [])]}, "
+                    "not what was pushed")
+    if after.get("source") != "dashboard":
+        errs.append(f"source={after.get('source')!r} after a push, want 'dashboard'")
+    report("POST /schedule replaces the routine on the band", errs)
+
+    status, _, reply, _ = request(base, "POST", "/schedule", body=json.dumps(body))
+    _, _, restored, _ = get_json(base, "/schedule")
+    report("the previous routine was put back",
+           ([] if status == 200 else [f"status {status}: {reply}"]) +
+           ([] if json.dumps(restored.get("items")) == before else
+            ["the band is NOT running what it was before this test - push it again "
+             "from the dashboard"]))
+    SCHEDULE_IDS = {item["id"] for item in restored.get("items", [])}
+
+
+def check_scan(base):
+    """GET /scan, the measurement tools/fingerprint_trainer.py is built on."""
+    status, headers, body, secs = request(base, "GET", "/scan", timeout=25)
+    errs = [] if status == 200 else [f"status {status}"]
+    errs += cors_errs(headers)
+    try:
+        aps = json.loads(body)
+    except ValueError:
+        report("GET /scan matches contract", errs + [f"body is not JSON: {body[:80]!r}"])
+        return
+    errs += validate_scan(aps)
+    heard = len(aps.get("aps", []))
+    if not heard:
+        errs.append("the band heard no access points, so no room table can be trained")
+    report(f"GET /scan matches contract ({heard} access points in {secs:.1f} s)", errs)
+
+
 def check_cors_preflight(base):
     errs = []
-    for path in ("/state", "/events", "/demo/fire", "/ack", "/silence", "/time"):
+    for path in ("/state", "/events", "/schedule", "/scan", "/demo/fire", "/ack", "/silence", "/time"):
         status, headers, _, _ = request(base, "OPTIONS", path)
         if status not in (200, 204):
             errs.append(f"OPTIONS {path} -> {status}")
@@ -116,7 +192,8 @@ def check_errors(base):
     if status != 404:
         errs.append(f"GET /nope -> {status}, want 404")
     errs += cors_errs(headers)
-    for path, want in (("/demo/fire", 400), ("/demo/fire?id=not_a_prompt", 404), ("/time", 400)):
+    for path, want in (("/demo/fire", 400), ("/demo/fire?id=not_a_prompt", 404),
+                       ("/time", 400), ("/schedule", 400)):
         status, _, body, _ = request(base, "POST", path)
         if status != want:
             errs.append(f"POST {path} -> {status}, want {want}")
@@ -124,7 +201,7 @@ def check_errors(base):
             json.loads(body)
         except ValueError:
             errs.append(f"POST {path} body is not JSON: {body!r}")
-    status, _, _, _ = request(base, "GET", "/demo/fire?id=lunch")
+    status, _, _, _ = request(base, "GET", "/demo/fire?id=lunch_checkin")
     if status == 200:
         errs.append("GET /demo/fire fired a prompt; should be POST-only")
     # /ack with nothing pending is a conflict, not a success.
@@ -226,10 +303,12 @@ def soak(base, minutes):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("host", help="device IP (printed on serial at boot)")
-    ap.add_argument("--fire", nargs="?", const="lunch", metavar="PROMPT_ID",
-                    help="also force a prompt (default: lunch) and wait for ack/miss")
+    ap.add_argument("--fire", nargs="?", const="lunch_checkin", metavar="PROMPT_ID",
+                    help="also force a prompt (default: lunch_checkin) and wait for ack/miss")
     ap.add_argument("--set-time", action="store_true", help="also POST /time with this machine's clock")
     ap.add_argument("--soak", type=float, metavar="MIN", help="also poll like the dashboard for MIN minutes")
+    ap.add_argument("--schedule", action="store_true",
+                    help="also push a routine to the band and restore the current one")
     a = ap.parse_args()
     base = "http://" + a.host.removeprefix("http://").rstrip("/")
 
@@ -242,8 +321,10 @@ def main():
 
     if a.set_time:
         check_set_time(base)
+    check_schedule(base, push=a.schedule)
     check_state(base)
     last = check_events(base)
+    check_scan(base)
     check_cors_preflight(base)
     check_errors(base)
     check_latency(base)
