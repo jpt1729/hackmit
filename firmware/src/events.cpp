@@ -1,4 +1,5 @@
 #include "events.h"
+#include "schedule.h"
 #include <time.h>
 #include <string.h>
 
@@ -8,7 +9,9 @@ struct Event {
   uint32_t id;
   time_t   ts;
   char     type[16];
-  char     detail[24];
+  // Wide enough for a prompt id: the dashboard mints `custom_<uuid>` ids for
+  // activities a caregiver adds, and a truncated one never matches back.
+  char     detail[PROMPT_ID_LEN];
 };
 
 static Event    buf[EVENT_BUF];
@@ -45,7 +48,7 @@ String eventsJsonSince(uint32_t sinceId) {
   for (uint16_t i = 0; i < count; i++) {
     const Event& e = buf[(oldest + i) % EVENT_BUF];
     if (e.id <= sinceId) continue;
-    char item[128];
+    char item[224];
     snprintf(item, sizeof(item), "%s{\"id\":%lu,\"ts\":%lu,\"type\":\"%s\",\"detail\":\"%s\"}",
              first ? "" : ",", (unsigned long)e.id, (unsigned long)e.ts, e.type, e.detail);
     out += item;

@@ -24,14 +24,16 @@
   --clock-track: #d7e4de;
   --clock-tick: #859993;
   --mascot-bg: #eff7f4;
+  --font-body: Verdana, Geneva, sans-serif;
+  --font-heading: Georgia, "Times New Roman", serif;
   font-size: 100%;
 }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
-body { margin: 0; background: var(--bg); color: var(--ink); font-family: Verdana, Geneva, sans-serif; line-height: 1.65; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-body); line-height: 1.65; }
 button { font: inherit; }
 h1, h2, h3, p { margin: 0; }
-h1, h2, h3 { font-family: Georgia, "Times New Roman", serif; letter-spacing: 0; }
+h1, h2, h3 { font-family: var(--font-heading); letter-spacing: 0; }
 h1 { font-size: clamp(2rem, 4vw, 3rem); line-height: 1.15; font-weight: 700; }
 h2 { font-size: 1.55em; line-height: 1.3; font-weight: 700; }
 h3 { font-size: 1.2em; line-height: 1.4; }
@@ -41,11 +43,6 @@ button { cursor: pointer; }
 :focus-visible { outline: 3px solid var(--focus); outline-offset: 5px; }
 .skip-link { position: absolute; left: 1rem; top: -10rem; padding: 0.65rem 1rem; background: var(--panel); z-index: 10; }
 .skip-link:focus { top: 0.5rem; }
-.topbar { border-bottom: 1px solid var(--subtle-border); background: var(--panel); }
-.topbar-inner { max-width: 1160px; padding: 0.8rem 1.5rem; margin: auto; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
-.brand { display: flex; align-items: center; gap: 0.7rem; color: var(--ink); font-weight: 700; text-decoration: none; white-space: nowrap; }
-.brand-mark { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 14px; background: var(--accent); color: var(--accent-ink); }
-.brand svg { width: 29px; height: 29px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .button { display: inline-flex; justify-content: center; align-items: center; gap: 0.5rem; min-height: 48px; padding: 0.55rem 0.85rem; border: 1px solid var(--border); border-radius: 11px; font-weight: 600; line-height: 1.4; background: var(--panel-raised); color: var(--ink); }
 .button svg { width: 22px; height: 22px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .button-secondary { background: transparent; font-size: 0.9em; }
@@ -56,13 +53,9 @@ button { cursor: pointer; }
 .button-primary:hover { background: var(--accent); outline: 2px solid var(--accent); outline-offset: 2px; }
 .button-small { font-size: 0.9em; }
 .shell { max-width: 1120px; margin: auto; padding: 2.2rem 1.5rem 1rem; }
-.page-heading { margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
-.page-heading > div:first-child { min-width: 0; }
 .brain-buddy-welcome { display: flex; align-items: center; gap: 1.25rem; padding: 0.8rem 1.5rem; margin-bottom: 1.4rem; border: 1px solid var(--subtle-border); border-radius: 20px; background: var(--mascot-bg); }
 .brain-buddy-welcome > div { min-width: 0; flex: 1; }
 .brain-buddy-intro { color: var(--muted); margin-top: 0.4rem; }
-#latest-message-title { margin: 1rem 0 0.6rem; }
-#caregiver-latest-message audio { max-width: 100%; }
 .brain-mascot { display: block; width: clamp(100px, 20vw, 175px); height: auto; flex-shrink: 0; }
 .mascot-shadow { fill: #513e54; opacity: 0.12; }
 .mascot-body { animation: buddy-bob 4s ease-in-out infinite; }
@@ -71,14 +64,6 @@ button { cursor: pointer; }
 @keyframes buddy-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
 @keyframes buddy-blink { 0%, 43%, 49%, 100% { transform: scaleY(1); } 46% { transform: scaleY(0.1); } }
 @keyframes buddy-wave { 0%, 12%, 28%, 100% { transform: rotate(0deg); } 16%, 24% { transform: rotate(-14deg); } 20% { transform: rotate(8deg); } }
-.demo-view-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.8rem; max-width: 1120px; margin: 0 auto; padding: 0.8rem 1.5rem; border-bottom: 1px solid var(--subtle-border); background: var(--panel); }
-.demo-view-bar p { color: var(--muted); font-size: 0.9em; }
-.demo-view-toggle { display: flex; gap: 0.4rem; }
-.demo-view-toggle .button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
-.message-role-label { color: var(--accent); font-weight: 700; margin: 0.5rem 0 1rem; }
-.caregiver-shortcut { flex: 0 0 auto; max-width: 17rem; }
-.caregiver-shortcut .button { width: 100%; text-align: center; text-decoration: none; }
-.date-line { color: var(--accent); margin-bottom: 0.45rem; min-height: 1.6em; font-size: 0.9em; font-weight: 700; }
 .intro { color: var(--muted); margin-top: 0.65rem; max-width: 60ch; }
 .day-badge { display: flex; align-items: center; gap: 0.4rem; white-space: nowrap; color: var(--warn-ink); background: var(--warn-bg); padding: 0.5rem 0.85rem; border-radius: 99px; }
 .mode-notice { display: flex; align-items: center; gap: 0.8rem; padding: 0.85rem 1rem; border: 1px solid var(--subtle-border); border-radius: 14px; background: var(--panel-raised); margin-bottom: 1.4rem; }
@@ -171,10 +156,6 @@ button { cursor: pointer; }
 #message-preview { display: grid; gap: 0.6rem; min-width: 0; padding: 0.7rem; border: 1px solid var(--border); border-radius: 10px; background: var(--panel); }
 #message-preview[hidden] { display: none; }
 .message-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-.caregiver-panel { margin-top: 1.4rem; border: 1px solid var(--subtle-border); border-radius: 16px; background: var(--panel); }
-.caregiver-content { padding: 0 1.5rem 1.5rem; }
-.caregiver-content section { border-top: 1px solid var(--subtle-border); padding-top: 1.3rem; margin-top: 0.8rem; }
-.caregiver-content section:first-child { border-top: 0; margin-top: 0; }
 .location-status { font-weight: 700; margin: 0.75rem 0; }
 .location-map { margin: 0; }
 .location-map-frame { position: relative; isolation: isolate; overflow: hidden; border: 1px solid var(--border); border-radius: 16px; }
@@ -188,12 +169,7 @@ button { cursor: pointer; }
 .location-map figcaption { color: var(--muted); font-size: 0.85em; margin-top: 0.65rem; }
 .location-details { display: grid; gap: 0.3rem; margin-top: 0.8rem; color: var(--muted); }
 #location-wear { color: var(--ink); font-weight: 700; }
-.contact-help { color: var(--muted); font-size: 0.85em; margin: 0.5rem 0 0.8rem; }
-.caregiver-form { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 0.6rem; max-width: 34rem; }
-.caregiver-form label { font-weight: 700; }
-.caregiver-form input { width: 100%; min-width: 0; padding: 0.65rem; border: 1px solid var(--border); border-radius: 9px; background: var(--panel); color: var(--ink); font: inherit; }
-.caregiver-form button { grid-column: 2; justify-self: start; }
-#caregiver-save-status { color: var(--accent); margin-top: 0.5rem; }
+.editor-help { color: var(--muted); font-size: 0.85em; margin: 0.5rem 0 0.8rem; }
 .alert-list { list-style: none; padding: 0; margin: 1rem 0; display: grid; gap: 0.7rem; }
 .alert-item { padding: 1rem; border-left: 4px solid var(--warn-ink); color: var(--warn-ink); background: var(--warn-bg); border-radius: 6px; }
 .alert-item.ok { border-left-color: var(--success-ink); background: var(--success-bg); color: var(--success-ink); }
@@ -206,7 +182,6 @@ button { cursor: pointer; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 @media (max-width: 800px) {
   .day-grid { grid-template-columns: 1fr; }
-  .page-heading { align-items: flex-start; }
   .clock-panel { padding-bottom: 1.5rem; }
   .routine-clock { max-width: 370px; }
 }
@@ -214,13 +189,8 @@ button { cursor: pointer; }
   .brain-buddy-welcome { flex-direction: column; align-items: stretch; gap: 0.6rem; padding: 1.05rem; }
   .brain-mascot { align-self: center; width: 110px; }
   .brain-buddy-welcome h2 { font-size: 1.25rem; }
-  .topbar-inner { padding: 0.8rem 1rem; gap: 0.5rem; }
-  .brand { font-size: 0.85em; gap: 0.5rem; }
-  .brand-mark { width: 40px; height: 40px; }
   .shell { padding: 1.3rem 0.8rem 0.5rem; }
   h1 { font-size: 1.8em; }
-  .page-heading { display: grid; }
-  .caregiver-shortcut { max-width: none; width: 100%; }
   .day-badge { display: none; }
   .mode-notice { flex-wrap: wrap; gap: 0.5rem; }
   .mode-notice > div { flex-basis: 85%; }
@@ -230,14 +200,6 @@ button { cursor: pointer; }
   .clock-panel .section-heading .small-badge { display: none; }
   .routine-clock { margin-top: 0.4rem; }
   .clock-event { width: 46px; height: 46px; }
-  .caregiver-form { grid-template-columns: 1fr; }
-  .caregiver-form button { grid-column: 1; }
-  .caregiver-content { padding: 0 1rem 1rem; }
-}
-@media (max-width: 360px) {
-  .topbar-inner { padding-inline: 0.65rem; }
-  .brand { font-size: 0.76em; gap: 0.35rem; }
-  .brand-mark { width: 38px; height: 38px; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
@@ -259,21 +221,189 @@ button { cursor: pointer; }
 .routine-remove { color: var(--missed-bg); background: var(--panel); font-size: 0.85em; flex-shrink: 0; }
 @media (max-width: 600px) { .routine-form { grid-template-columns: minmax(0, 1fr); } }
 
+/* Caregiver home and the conversation share one illustrated scene. */
+.message-text-option { justify-self: start; min-height: 44px; border: 0; padding: 0.3rem 0; color: var(--accent); background: transparent; text-decoration: underline; text-underline-offset: 4px; }
+.message-play { display: none; }
+
+.caregiver-app {
+  --sky: #8ac3e5;
+  --cloud: #fcf1ff;
+  --bubble-pink: #ffebef;
+  --bubble-lilac: #ecd9f6;
+  --drawing-ink: #4f405b;
+  --bg: var(--cloud);
+  --panel: #fffaff;
+  --panel-raised: #f3e6f8;
+  --ink: #332b42;
+  --muted: #665671;
+  --accent: #654486;
+  --soft: #f2ddf8;
+  --border: #bda6cd;
+  --subtle-border: #dfcde8;
+  --focus: #624085;
+  --clock-track: #ddcde7;
+  --clock-tick: #a994b6;
+  --mascot-bg: transparent;
+}
+.caregiver-app .shell { max-width: none; padding: 0; }
+.caregiver-app .app-stage { min-height: 100svh; background: var(--cloud); padding-bottom: calc(76px + env(safe-area-inset-bottom)); overflow: clip; }
+.caregiver-app .buddy-scene { position: relative; min-height: clamp(530px, calc(100svh - 220px), 720px); background: var(--sky); padding: 0.5rem 0 100px; }
+.caregiver-app .brain-buddy-welcome { display: contents; }
+.caregiver-app #brain-buddy-title { padding: 0.4rem 1rem 0; }
+/* Frame each uploaded artwork within its transparent margins. */
+.brain-buddy-logo, .routine-logo { position: relative; margin: 0 auto; overflow: hidden; }
+.brain-buddy-logo { display: block; width: min(88%, 360px); aspect-ratio: 942 / 188; }
+.brain-buddy-logo img, .routine-logo img { position: absolute; max-width: none; height: auto; }
+.brain-buddy-logo img { width: 145.0106%; left: -22.6115%; top: -157.9787%; }
+.routine-logo { display: block; width: min(72vw, 320px); aspect-ratio: 1082 / 123; }
+.routine-logo img { width: 126.2477%; left: -12.8466%; top: -262.6016%; }
+.caregiver-app .message-invitation { position: absolute; z-index: 2; top: 100px; left: 50%; transform: translateX(-50%); min-width: 225px; min-height: 66px; padding: 0.7rem 1.5rem; color: var(--ink); background: var(--bubble-pink); border: 0; border-radius: 34px; font: 600 1.4rem/1.4 var(--font-body); }
+.caregiver-app .brain-buddy-button { position: absolute; z-index: 1; top: 185px; left: 50%; width: clamp(240px, 65vw, 310px); padding: 0; background: transparent; border: 0; border-radius: 48%; transform: translateX(-50%); transition: left 550ms ease, top 550ms ease, transform 550ms ease, width 550ms ease; }
+.caregiver-app .brain-mascot { width: 100%; height: auto; margin: 0; }
+.caregiver-app .message-invitation:hover { filter: brightness(1.03); }
+.caregiver-app .messages-panel { display: none; }
+.caregiver-app .buddy-scene.messages-open { min-height: 530px; }
+.caregiver-app .messages-open .message-invitation { display: none; }
+.caregiver-app .messages-open .brain-buddy-button { left: max(0px, calc(50% - 350px)); top: 220px; width: 235px; transform: translateX(-48%) rotate(-9deg); }
+.caregiver-app .messages-open .messages-panel { display: flex; flex-direction: column; gap: 1.1rem; position: relative; z-index: 2; width: min(calc(100% - 104px), 460px); margin: 1rem 16px 0 max(88px, calc(50% - 200px)); padding: 0; background: transparent; border: 0; border-radius: 0; box-shadow: none; animation: conversation-appear 400ms ease both; }
+.caregiver-app .messages-panel:focus { outline: none; }
+.caregiver-app .messages-panel > .section-label, .caregiver-app #message-compose-title,
+.caregiver-app #message-recording-help, .caregiver-app .transcription-option,
+.caregiver-app #transcription-help, .caregiver-app #transcript-help { display: none; }
+.caregiver-app #transcript-status, .caregiver-app #message-preview > label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.caregiver-app #message-thread {
+  --message-min-height: 80px;
+  --message-gap: 12px;
+  /* Four compact messages fit; longer messages remain fully scrollable. */
+  max-height: calc(4 * var(--message-min-height) + 3 * var(--message-gap) + 24px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  overflow-anchor: none;
+  overscroll-behavior-y: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #76638a transparent;
+  scrollbar-gutter: stable;
+  padding: 0 8px 12px 0;
+}
+.caregiver-app #message-list { display: flex; flex-direction: column; gap: var(--message-gap); padding-block: 6px; }
+.caregiver-app #message-list > .message-card { width: 95%; flex: 0 0 auto; }
+.caregiver-app #message-list > .message-card.sent { margin-left: auto; }
+.caregiver-app .message-card { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 0.35rem 0.6rem; min-height: var(--message-min-height); padding: 0.75rem 1rem; border: 0; border-radius: 28px; background: var(--bubble-pink); box-shadow: none; }
+.caregiver-app .message-card.sent { border-radius: 28px; background: var(--bubble-lilac); }
+/* Only the final bubble on each side has the curved, downward tail.
+   Earlier replies keep all four corners rounded. */
+.caregiver-app :is(.message-invitation, .message-card.latest-incoming, .message-compose) { isolation: isolate; }
+.caregiver-app :is(.message-invitation, .message-card.latest-incoming, .message-compose)::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  bottom: -9px;
+  width: 36px;
+  height: 38px;
+  background: inherit;
+  clip-path: path("M 0 0 H 36 C 34 12 16 20 26 36 C 13 32 5 27 0 18 Z");
+  pointer-events: none;
+}
+.caregiver-app .message-card.latest-incoming::before {
+  left: 0;
+  transform: scaleX(-1);
+}
+.caregiver-app .message-invitation::before {
+  left: 50%;
+  bottom: -18px;
+  width: 28px;
+  height: 22px;
+  transform: translateX(-50%);
+  clip-path: path("M 0 0 H 28 C 25 7 20 15 14 22 C 8 15 3 7 0 0 Z");
+}
+.caregiver-app .message-compose::before { right: 0; }
+.caregiver-app .message-card .message-sender { grid-column: 1 / -1; font-size: 0.73rem; color: var(--muted); font-weight: 500; }
+.caregiver-app .message-card .message-transcript { font-size: 1rem; line-height: 1.55; }
+.caregiver-app .message-card time, .caregiver-app .message-card audio, .caregiver-app .message-transcript-label { display: none; }
+.caregiver-app .message-play { display: grid; place-items: center; width: 46px; height: 46px; padding: 0; border: 1.5px solid var(--drawing-ink); border-radius: 50%; color: var(--drawing-ink); background: #ffffff50; }
+.message-play svg { width: 21px; height: 21px; fill: currentColor; }
+.message-play .pause-icon, .message-play[aria-pressed="true"] .play-icon { display: none; }
+.message-play[aria-pressed="true"] .pause-icon { display: block; }
+.caregiver-app #message-list .messages-empty { min-height: 94px; display: grid; align-items: center; padding: 1rem; color: var(--muted); background: var(--bubble-pink); border: 0; border-radius: 28px; }
+.caregiver-app .message-compose { position: relative; display: grid; gap: 0.3rem; margin: 0 0 0 0.75rem; padding: 0.9rem; background: var(--bubble-lilac); border: 0; border-radius: 28px; }
+.caregiver-app #message-record { justify-self: stretch; min-height: 58px; padding: 0.3rem; color: var(--ink); background: transparent; border: 0; border-radius: 8px; font: 600 clamp(1.15rem, 4.7vw, 1.4rem)/1.3 var(--font-body); }
+.caregiver-app #message-record:hover { outline: none; background: #ffffff45; }
+.caregiver-app #message-record[data-recording="true"] { color: #842e47; }
+.caregiver-app .message-text-option { justify-self: center; min-height: 44px; padding: 0.3rem; color: #55416c; font-size: 0.85rem; }
+.caregiver-app #message-preview { padding: 0.5rem 0 0; background: transparent; border: 0; }
+.caregiver-app #message-transcript { min-height: 105px; padding: 0.75rem; background: #fff8ff; border-color: #b69bc9; border-radius: 13px; }
+.caregiver-app .message-actions { gap: 0.4rem; }
+.caregiver-app .message-actions .button { flex: 1; min-height: 44px; padding-inline: 0.5rem; font-size: 0.85rem; }
+.caregiver-app .messages-status { order: 1; margin: 0; font-size: 0.85rem; }
+.caregiver-app .messages-status[data-kind="hint"], .messages-status:empty { display: none; }
+.caregiver-app .messages-status[data-kind="error"] { color: #74213b; background: #ffecf0; border-radius: 9px; padding: 0.5rem 0.7rem; }
+.caregiver-app .day-grid { display: flex; flex-direction: column; gap: 0; margin: 0; }
+.caregiver-app .clock-panel { position: relative; margin: 0; padding: 0.4rem max(1rem, calc((100% - 700px) / 2)) 2rem; border: 0; border-radius: 0; box-shadow: none; background: var(--cloud); }
+.caregiver-app .cloud-border { display: block; position: absolute; bottom: calc(100% - 1px); left: 0; width: 100%; height: clamp(80px, 10vw, 130px); pointer-events: none; }
+.cloud-fill { fill: var(--cloud); }
+.cloud-outline { fill: none; stroke: var(--drawing-ink); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.caregiver-app .clock-panel .section-heading { justify-content: center; margin-bottom: 1.4rem; }
+.caregiver-app .clock-panel .section-label, .caregiver-app .clock-panel .small-badge { display: none; }
+.caregiver-app .clock-panel h2 { text-align: center; font: 700 1.5rem var(--font-heading); text-transform: uppercase; letter-spacing: 0.08em; }
+.caregiver-app .routine-clock { max-width: 370px; }
+.caregiver-app .clock-legend { max-width: 520px; margin: 1.5rem auto 0; padding: 1rem; border: 1.5px solid #bba3c8; border-radius: 8px 5px 7px 10px; gap: 0.8rem 1.2rem; background: #ffffff40; }
+.caregiver-app .bottom-nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; display: grid; grid-template-columns: repeat(4, 1fr); min-height: calc(76px + env(safe-area-inset-bottom)); padding: 0 max(0px, calc((100% - 800px) / 2)) env(safe-area-inset-bottom); background: #e7d1f0; border-top: 2px solid var(--drawing-ink); }
+.caregiver-app .bottom-nav a, .caregiver-app .bottom-nav button { display: grid; place-items: center; min-height: 74px; padding: 0.3rem; color: var(--ink); background: transparent; border: 0; font: 500 clamp(0.82rem, 3.7vw, 1.1rem) var(--font-body); text-decoration: none; }
+.caregiver-app .bottom-nav a:hover, .caregiver-app .bottom-nav button:hover { background: #fff1fb80; }
+.caregiver-app .footer-note { display: none; }
+@keyframes conversation-appear { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@media (min-width: 700px) {
+  .caregiver-app .brain-buddy-button { top: 180px; }
+  .caregiver-app .message-invitation { top: 100px; }
+}
+@media (max-width: 360px) {
+  .caregiver-app .messages-open .messages-panel { width: calc(100% - 78px); margin-left: 62px; }
+  .caregiver-app .messages-open .brain-buddy-button { left: -20px; }
+  .caregiver-app .message-card { padding: 0.75rem; gap: 0.3rem; }
+  .caregiver-app .message-compose { margin-left: 0; padding: 0.7rem; }
+}
+
+.caregiver-app .routine-editor-panel,
+.caregiver-app .ring-panel,
+.caregiver-app .watch-message-panel,
+.caregiver-app .location-section,
+.caregiver-app .notices-panel { width: min(calc(100% - 2rem), 700px); margin: 0 auto 1.5rem; background: var(--panel); box-shadow: none; }
+/* The fall banner matches that column but keeps its own alarm colours. The
+   clock panel's cloud edge is absolutely positioned and rises over whatever
+   precedes it, so the banner has to sit above it to stay readable. */
+.caregiver-app .fall-banner { position: relative; z-index: 2; width: min(calc(100% - 2rem), 700px); margin: 1rem auto 1.5rem; }
+.caregiver-app .clock-panel .view-tabs { margin-bottom: 1rem; }
+.caregiver-app .notices-panel .mode-notice { margin-top: 0.9rem; }
+.caregiver-app .activity-heading { padding-top: 1rem; border-top: 1px solid var(--subtle-border); }
+.caregiver-app :is(#clock-title, #location-title, #notices-title) { scroll-margin-top: 1rem; }
+.caregiver-app .bottom-nav a:focus-visible, .caregiver-app .bottom-nav button:focus-visible { outline-offset: -5px; }
+
+/* ---------------------------------------------------------------- routine sync
+   The caregiver's routine on its way to the wristband. */
+.routine-sync { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; padding: 0.85rem 1rem; border: 1px solid var(--subtle-border); border-radius: 16px; background: var(--panel-raised); margin-top: 0.8rem; }
+.routine-sync-status { flex: 1; min-width: 12rem; margin: 0; color: var(--muted); font-size: 0.85em; }
+.routine-sync-status[data-kind="ok"] { color: var(--success-ink); font-weight: 600; }
+.routine-sync-status[data-kind="warn"] { color: var(--warn-ink); font-weight: 600; }
+.alert-action-card { border-left-color: var(--accent); background: var(--soft); color: var(--ink); }
+.alert-action-card .alert-action { margin-top: 0.7rem; }
+.alert-action-result:empty { display: none; }
+.alert-action-result { margin: 0.6rem 0 0; font-size: 0.9em; font-weight: 600; }
+
 /* ---------------------------------------------------------------- fall banner
    Deliberately the loudest block on the page: if it is showing, nothing else
-   on the dashboard matters. */
-.fall-banner { display: grid; gap: 0.5rem; justify-items: start; margin: 0 0 1.25rem; padding: 1.1rem 1.25rem; border-radius: 14px; border: 2px solid var(--missed-bg); background: var(--missed-soft); }
+   on the dashboard matters. It spans the grid so it is never a side column. */
+.fall-banner { display: grid; gap: 0.5rem; justify-items: start; padding: 1.15rem 1.35rem; border-radius: 20px; border: 2px solid var(--missed-bg); background: var(--missed-soft); }
 .fall-banner h2 { margin: 0; color: var(--missed-bg); font-size: 1.35rem; }
 .fall-banner p { margin: 0; color: var(--ink); }
-.fall-banner .button-primary { margin-top: 0.35rem; }
+.fall-banner .button { margin-top: 0.35rem; }
 .fall-banner .fall-status { color: var(--muted); font-size: 0.92rem; }
 /* The two escalated stages invert, so a glance at the page cannot miss them. */
 .fall-banner.fall-caregiver, .fall-banner.fall-ems { background: var(--missed-bg); border-color: var(--missed-bg); }
 .fall-banner.fall-caregiver h2, .fall-banner.fall-ems h2,
 .fall-banner.fall-caregiver p, .fall-banner.fall-ems p { color: var(--missed-ink); }
 .fall-banner.fall-caregiver .fall-status, .fall-banner.fall-ems .fall-status { color: #ffe2e7; }
-/* The default disabled style is grey on white, which vanishes on the inverted
-   stages. Keep it legible, and keep it obviously not-clickable. */
+/* The default disabled style is grey on white, which vanishes once inverted.
+   Keep it legible, and keep it obviously not-clickable. */
 .fall-banner.fall-caregiver .button, .fall-banner.fall-ems .button { color: var(--missed-bg); background: var(--missed-ink); border-color: var(--missed-ink); }
 .fall-banner.fall-caregiver .button:disabled, .fall-banner.fall-ems .button:disabled { color: var(--missed-bg); background: #f2c3cc; border-color: #f2c3cc; opacity: 1; }
 
@@ -286,7 +416,7 @@ button { cursor: pointer; }
 .ring { display: grid; place-items: center; }
 .ring-dial { position: relative; width: 120px; height: 120px; border-radius: 50%; background: var(--panel-raised); border: 1px solid var(--subtle-border); }
 .ring-pixel { position: absolute; top: 50%; left: 50%; width: 11px; height: 11px; margin: -5.5px; border-radius: 50%; background: var(--clock-track); transform-origin: center; }
-.ring-pixel.lit { background: #1f9e4a; box-shadow: 0 0 6px rgba(31, 158, 74, 0.55); }
+.ring-pixel.lit { background: #1f9e4a; box-shadow: 0 0 6px #1f9e4a8c; }
 .ring-centre { position: absolute; inset: 0; display: grid; align-content: center; justify-items: center; }
 .ring-centre strong { font-size: 1.3rem; line-height: 1.1; }
 .ring-centre span { color: var(--muted); font-size: 0.8rem; }
@@ -295,6 +425,4 @@ button { cursor: pointer; }
 
 .message-count { margin: 0.15rem 0 0; color: var(--muted); font-size: 0.85rem; text-align: right; }
 
-@media (prefers-reduced-motion: reduce) {
-  .ring-pixel { box-shadow: none; }
-}
+@media (prefers-reduced-motion: reduce) { .ring-pixel { box-shadow: none; } }

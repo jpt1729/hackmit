@@ -1,6 +1,8 @@
 #include "server.h"
 #include "config.h"
 #include "events.h"
+#include "schedule.h"
+#include "location.h"
 #include "prompts.h"
 #include "safety.h"
 #include "fall.h"
@@ -23,8 +25,9 @@ static void reply(int code, const String& json) {
 }
 
 static void handleState() {
-  char pending[32] = "null";
-  if (g_state.pendingPrompt >= 0) snprintf(pending, sizeof(pending), "\"%s\"", SCHEDULE[g_state.pendingPrompt].id);
+  char pending[PROMPT_ID_LEN + 4] = "null";
+  if (g_state.pendingPrompt >= 0)
+    snprintf(pending, sizeof(pending), "\"%s\"", scheduleAt(g_state.pendingPrompt).id);
 
   // Without a fix the position fields are null, not stale coordinates.
   char gps[160];
@@ -101,6 +104,36 @@ static void handleDemoFire() {
   reply(200, "{\"ok\":true}");
 }
 
+// The routine the caregiver built on the dashboard, applied to the wrist.
+// Without this the band could only ever remind about what was compiled into
+// config.h, and the routine editor was a list that talked to nobody.
+static void handleSchedulePush() {
+  if (!http.hasArg("plain")) return reply(400, "{\"error\":\"missing body\"}");
+  String body = http.arg("plain");
+
+  char err[80] = "";
+  if (!scheduleReplace(body.c_str(), err, sizeof(err))) {
+    char out[160];
+    snprintf(out, sizeof(out), "{\"error\":\"%s\"}", err);
+    return reply(400, out);
+  }
+
+  // The routine is live from here; indices into the old table are stale.
+  promptsScheduleChanged();
+  schedulePersist(body.c_str());
+  addEvent("schedule_set", "dashboard");
+
+  char out[64];
+  snprintf(out, sizeof(out), "{\"ok\":true,\"count\":%u}", scheduleCount());
+  reply(200, out);
+}
+
+static void handleScheduleGet() { reply(200, scheduleJson()); }
+
+// A raw WiFi scan, so tools/fingerprint_trainer.py can learn the rooms from
+// the band's own radio rather than from a laptop standing somewhere else.
+static void handleScan() { reply(200, locationScanJson()); }
+
 static void handleTime() {
   if (!http.hasArg("epoch")) return reply(400, "{\"error\":\"missing epoch\"}");
   struct timeval tv = {(time_t)http.arg("epoch").toInt(), 0};
@@ -111,6 +144,9 @@ static void handleTime() {
 void serverInit() {
   http.on("/state",     HTTP_GET,  handleState);
   http.on("/events",    HTTP_GET,  handleEvents);
+  http.on("/schedule",  HTTP_GET,  handleScheduleGet);
+  http.on("/schedule",  HTTP_POST, handleSchedulePush);
+  http.on("/scan",      HTTP_GET,  handleScan);
   http.on("/demo/fire", HTTP_POST, handleDemoFire);
   http.on("/ack",       HTTP_POST, handleAck);
   http.on("/silence",   HTTP_POST, handleSilence);
@@ -118,7 +154,8 @@ void serverInit() {
   http.on("/fall/cancel",      HTTP_POST, handleFallCancel);
   http.on("/message",          HTTP_POST, handleMessage);
   http.on("/message/dismiss",  HTTP_POST, handleMessageDismiss);
-  for (const char* path : {"/state", "/events", "/demo/fire", "/ack", "/silence", "/time",
+  for (const char* path : {"/state", "/events", "/schedule", "/scan",
+                           "/demo/fire", "/ack", "/silence", "/time",
                            "/fall/cancel", "/message", "/message/dismiss"}) {
     http.on(path, HTTP_OPTIONS, [] {
       cors();

@@ -9,6 +9,7 @@
 #include "gps.h"
 #include "buzzer.h"
 #include "leds.h"
+#include "schedule.h"
 #include "prompts.h"
 #include "safety.h"
 #include "fall.h"
@@ -40,9 +41,6 @@ static void connectWiFi() {
 void setup() {
   Serial.begin(115200);
   delay(1000);
-  Serial.println("Granny Nanny firmware placeholder");
-  Serial.println("Build the DeviceState contract and modules here.");
-  delay(200);
   Serial.println("\n[routine-anchor] boot");
 
   ledsInit();
@@ -57,6 +55,7 @@ void setup() {
   wearInit();
   locationInit();
   gpsInit();                        // also sets the clock if NTP is blocked
+  scheduleInit();                   // NVS routine if the dashboard pushed one
   promptsInit();
   safetyInit();
   fallInit();

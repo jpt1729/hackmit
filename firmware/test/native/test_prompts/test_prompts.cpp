@@ -1,5 +1,6 @@
 #include <unity.h>
 #include "prompts.h"
+#include "schedule.h"
 #include "activity.h"
 #include "buzzer.h"
 #include "leds.h"
@@ -14,6 +15,7 @@ static int MEDS, LUNCH;
 void setUp() {
   resetMocks();
   mock::imuPresent = false;   // most tests drive g_state.activity by hand
+  scheduleResetToDefaults();  // config.h defaults, not whatever a test pushed
   eventsInit();
   buzzerInit();
   ledsInit();
@@ -21,7 +23,7 @@ void setUp() {
   activityInit();
   promptsInit();
   MEDS = promptsFindById("meds_9am");
-  LUNCH = promptsFindById("lunch");
+  LUNCH = promptsFindById("lunch_checkin");
 }
 void tearDown() {}
 
@@ -58,24 +60,24 @@ void test_find_by_id() {
 }
 
 void test_schedule_ids_fit_event_detail() {
-  for (size_t i = 0; i < SCHEDULE_LEN; i++)
-    TEST_ASSERT_LESS_THAN_MESSAGE(24, strlen(SCHEDULE[i].id), SCHEDULE[i].id);
+  for (uint8_t i = 0; i < scheduleCount(); i++)
+    TEST_ASSERT_LESS_THAN_MESSAGE(PROMPT_ID_LEN, strlen(scheduleAt(i).id), scheduleAt(i).id);
 }
 
 // The OLED shows labels at text size 2: 10 chars per line, 3 lines above the footer.
 void test_labels_fit_on_oled() {
-  for (size_t i = 0; i < SCHEDULE_LEN; i++) {
+  for (uint8_t i = 0; i < scheduleCount(); i++) {
     char buf[64];
-    strlcpy(buf, SCHEDULE[i].label, sizeof(buf));
+    strlcpy(buf, scheduleAt(i).label, sizeof(buf));
     int lines = 1;
     size_t used = 0;
     for (char* w = strtok(buf, " "); w; w = strtok(nullptr, " ")) {
       size_t len = strlen(w);
-      TEST_ASSERT_LESS_OR_EQUAL_MESSAGE(10, len, SCHEDULE[i].label);
+      TEST_ASSERT_LESS_OR_EQUAL_MESSAGE(10, len, scheduleAt(i).label);
       if (used && used + 1 + len > 10) { lines++; used = len; }
       else used += (used ? 1 : 0) + len;
     }
-    TEST_ASSERT_LESS_OR_EQUAL_MESSAGE(3, lines, SCHEDULE[i].label);
+    TEST_ASSERT_LESS_OR_EQUAL_MESSAGE(3, lines, scheduleAt(i).label);
   }
 }
 
@@ -124,7 +126,7 @@ void test_any_room_prompt_ignores_room() {
   g_state.room = BEDROOM;
   mock::epoch = at(12, 30);
   run(2000);
-  TEST_ASSERT_EQUAL(1, countEvents("prompt_fired", "lunch"));
+  TEST_ASSERT_EQUAL(1, countEvents("prompt_fired", "lunch_checkin"));
 }
 
 void test_not_worn_holds_then_fires_on_wear() {
@@ -159,14 +161,15 @@ void test_held_past_window_is_missed_without_firing() {
 }
 
 void test_away_from_home_holds_the_routine() {
-  // Out for a walk: the 12:30 lunch prompt waits until they are back.
+  // Out for a walk: the midday lunch prompt waits until they are back, as long
+  // as they return inside PROMPT_HOLD_MIN.
   g_state.awayFromHome = true;
-  mock::epoch = at(12, 30);
+  mock::epoch = at(12, 0);
   run(10 * 60000);
   TEST_ASSERT_EQUAL(0, countEvents("prompt_fired"));
   g_state.awayFromHome = false;
   run(2000);
-  TEST_ASSERT_EQUAL(1, countEvents("prompt_fired", "lunch"));
+  TEST_ASSERT_EQUAL(1, countEvents("prompt_fired", "lunch_checkin"));
 }
 
 // ---------- ack / rebuzz / miss ----------
@@ -247,12 +250,12 @@ void test_demo_fire_bypasses_time_and_gates() {
   g_state.activity = SLEEPING;
   promptsDemoFire(LUNCH);
   TEST_ASSERT_EQUAL(LUNCH, g_state.pendingPrompt);
-  TEST_ASSERT_EQUAL(1, countEvents("prompt_fired", "lunch"));
+  TEST_ASSERT_EQUAL(1, countEvents("prompt_fired", "lunch_checkin"));
 }
 
 void test_demo_fire_rejects_bad_index() {
   promptsDemoFire(-1);
-  promptsDemoFire((int)SCHEDULE_LEN);
+  promptsDemoFire((int)scheduleCount());
   TEST_ASSERT_EQUAL(-1, g_state.pendingPrompt);
   TEST_ASSERT_EQUAL(0, countEvents("prompt_fired"));
 }
@@ -274,7 +277,7 @@ void test_one_prompt_at_a_time() {
   run(20000);
   TEST_ASSERT_EQUAL(0, countEvents("prompt_fired", "meds_9am"));
   run(ACK_WINDOW_MS);                 // lunch resolves -> meds gets its turn
-  TEST_ASSERT_EQUAL(1, countEvents("prompt_missed", "lunch"));
+  TEST_ASSERT_EQUAL(1, countEvents("prompt_missed", "lunch_checkin"));
   TEST_ASSERT_EQUAL(1, countEvents("prompt_fired", "meds_9am"));
 }
 

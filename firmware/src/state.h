@@ -1,6 +1,7 @@
 #pragma once
 #include <Arduino.h>
 #include <time.h>
+#include <string.h>
 
 enum Activity : uint8_t { SLEEPING, RESTING, MOVING };
 
@@ -38,6 +39,17 @@ inline const char* roomName(Room r) {
     case LIVING:  return "living";
     default:      return "unknown";
   }
+}
+
+// Inverse of roomName(): turns a contract room name from POST /schedule back
+// into a Room. "any" means the reminder is not tied to a room at all.
+inline bool roomFromName(const char* name, Room& out) {
+  if (!strcmp(name, "any"))     { out = ANY_ROOM;     return true; }
+  if (!strcmp(name, "unknown")) { out = ROOM_UNKNOWN; return true; }
+  if (!strcmp(name, "kitchen")) { out = KITCHEN;      return true; }
+  if (!strcmp(name, "bedroom")) { out = BEDROOM;      return true; }
+  if (!strcmp(name, "living"))  { out = LIVING;       return true; }
+  return false;
 }
 
 struct DeviceState {

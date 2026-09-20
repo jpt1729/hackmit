@@ -1,5 +1,6 @@
 #include "prompts.h"
 #include "config.h"
+#include "schedule.h"
 #include "events.h"
 #include "activity.h"
 #include "buzzer.h"
@@ -7,24 +8,26 @@
 #include "display.h"
 #include <string.h>
 
-static bool     doneToday[SCHEDULE_LEN];
-static bool     ackedToday[SCHEDULE_LEN];
+static bool     doneToday[SCHEDULE_MAX];
+static bool     ackedToday[SCHEDULE_MAX];
 static int      lastDay = -1;
 static uint32_t firedAtMs = 0;
 static bool     rebuzzed = false;
 static uint32_t lastCheckMs = 0;
 
 // The ring counts what the wearer actually did, so a missed prompt closes the
-// slot without lighting a pixel.
+// slot without lighting a pixel. The total follows the live schedule, so a
+// routine pushed from the dashboard resizes the ring with it.
 static void recount() {
+  uint8_t total = scheduleCount();
   uint8_t done = 0;
-  for (size_t i = 0; i < SCHEDULE_LEN; i++)
+  for (uint8_t i = 0; i < total; i++)
     if (ackedToday[i]) done++;
   g_state.tasksDone = done;
-  g_state.tasksTotal = SCHEDULE_LEN;
+  g_state.tasksTotal = total;
 }
 
-static bool gatesPass(const PromptDef& p) {
+static bool gatesPass(const Prompt& p) {
   if (!g_state.worn || g_state.activity == SLEEPING) return false;
   if (g_state.awayFromHome) return false;   // out of the house: routine can wait
   return p.room == ANY_ROOM || g_state.room == ROOM_UNKNOWN || g_state.room == p.room;
@@ -36,11 +39,11 @@ static void fire(int idx) {
   firedAtMs = millis();
   rebuzzed = false;
   buzzerGentle();
-  addEvent("prompt_fired", SCHEDULE[idx].id);
+  addEvent("prompt_fired", scheduleAt(idx).id);
 }
 
 static void resolve(int idx, const char* type) {
-  addEvent(type, SCHEDULE[idx].id);
+  addEvent(type, scheduleAt(idx).id);
   doneToday[idx] = true;
   if (strcmp(type, "prompt_acked") == 0) ackedToday[idx] = true;
   g_state.pendingPrompt = -1;
@@ -57,14 +60,21 @@ void promptsInit() {
   recount();
 }
 
-int promptsFindById(const char* id) {
-  for (size_t i = 0; i < SCHEDULE_LEN; i++)
-    if (strcmp(SCHEDULE[i].id, id) == 0) return i;
-  return -1;
+int promptsFindById(const char* id) { return scheduleFindById(id); }
+
+// A pushed routine renumbers everything, so anything holding an index into the
+// old table - the pending prompt, today's done flags - has to let go.
+void promptsScheduleChanged() {
+  memset(doneToday, 0, sizeof(doneToday));
+  memset(ackedToday, 0, sizeof(ackedToday));
+  g_state.pendingPrompt = -1;
+  rebuzzed = false;
+  lastDay = -1;
+  recount();
 }
 
 void promptsDemoFire(int idx) {
-  if (idx < 0 || idx >= (int)SCHEDULE_LEN) return;
+  if (idx < 0 || idx >= (int)scheduleCount()) return;
   doneToday[idx] = true;
   fire(idx);
 }
@@ -111,12 +121,13 @@ void promptsTick() {
   if (g_state.pendingPrompt >= 0) return;
 
   int nowMin = tmv.tm_hour * 60 + tmv.tm_min;
-  for (size_t i = 0; i < SCHEDULE_LEN; i++) {
-    int lateMin = nowMin - (SCHEDULE[i].hour * 60 + SCHEDULE[i].minute);
+  for (uint8_t i = 0; i < scheduleCount(); i++) {
+    const Prompt& prompt = scheduleAt(i);
+    int lateMin = nowMin - (prompt.hour * 60 + prompt.minute);
     if (doneToday[i] || lateMin < 0) continue;
     if (lateMin > PROMPT_HOLD_MIN) {
       resolve(i, "prompt_missed");
-    } else if (gatesPass(SCHEDULE[i])) {
+    } else if (gatesPass(prompt)) {
       fire(i);
       break;
     }

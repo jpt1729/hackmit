@@ -6,9 +6,6 @@
 #define NTP_SERVER    "pool.ntp.org"
 #define TZ_OFFSET_SEC (-4 * 3600)
 
-// Placeholder config for the Granny Nanny build spec.
-#define WIFI_SSID "your_wifi"
-#define WIFI_PASSWORD "your_password"
 #ifndef ENABLE_WEAR
 #define ENABLE_WEAR 1
 #endif
@@ -127,14 +124,19 @@ static const RoomFP ROOM_FPS[] = {
 #define SAFETY_WANDER_MS    300000   // night-wander chime cooldown
 
 // ---------------------------------------------------------------- prompts
+// What the band reminds about when nobody has set it up yet. The dashboard
+// replaces this over POST /schedule and the result is kept in NVS, so these
+// are only ever the first-boot fallback - see schedule.h.
 struct PromptDef { uint8_t hour, minute; const char* id; const char* label; Room room; };
 
-static const PromptDef SCHEDULE[] = {
-  {  9,  0, "meds_9am",  "Meds are in the kitchen", KITCHEN  },
-  { 12, 30, "lunch",     "Time for lunch",          ANY_ROOM },
-  { 21,  0, "wind_down", "Getting ready for bed",   ANY_ROOM },
+// Ids match the dashboard's starting routine (docs/js/checklist.js), so a band
+// nobody has set up yet still lines up with what the dashboard draws.
+static const PromptDef DEFAULT_SCHEDULE[] = {
+  {  9,  0, "meds_9am",      "Meds are in the kitchen", KITCHEN  },
+  { 12,  0, "lunch_checkin", "Time for lunch",          ANY_ROOM },
+  { 19,  0, "quiet_time",    "Getting ready for bed",   ANY_ROOM },
 };
-#define SCHEDULE_LEN (sizeof(SCHEDULE) / sizeof(SCHEDULE[0]))
+#define DEFAULT_SCHEDULE_LEN (sizeof(DEFAULT_SCHEDULE) / sizeof(DEFAULT_SCHEDULE[0]))
 
 #define ACK_WINDOW_MS   60000
 #define REBUZZ_AT_MS    30000

@@ -50,7 +50,7 @@ void test_free_heap_at_boot() {
 
 void test_full_event_log_fits_and_does_not_leak() {
   eventsInit();
-  for (int i = 0; i < 250; i++) addEvent("prompt_missed", "wind_down");
+  for (int i = 0; i < 250; i++) addEvent("prompt_missed", "quiet_time");
   uint32_t before = ESP.getFreeHeap();
   size_t len = 0;
   for (int i = 0; i < 20; i++) len = eventsJsonSince(0).length();   // 20 dashboard polls

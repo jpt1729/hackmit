@@ -1,4 +1,4 @@
-import { deviceHost, postDevice } from "./api.js";
+import { deviceCommand, deviceOnline } from "./api.js";
 
 // Sends a short note to the OLED on the wrist. The dashboard already records
 // voice messages with a transcript; this puts that text where the wearer will
@@ -9,13 +9,13 @@ function setupWatchMessage(form) {
   if (!form) return;
   const input = form.querySelector("#watch-message-text");
   const button = form.querySelector("#watch-message-send");
-  const counter = form.querySelector("#watch-message-count");
-  // The status line lives outside the form so screen readers announce it
-  // without it being part of the submitted controls.
+  // The count and status lines sit outside the form, so they are looked up on
+  // the document rather than within it.
+  const counter = document.getElementById("watch-message-count");
   const status = document.getElementById("watch-message-status");
   if (!input || !button || !counter || !status) return;
 
-  const connected = Boolean(deviceHost());
+  const connected = deviceOnline();
   input.disabled = button.disabled = !connected;
   if (!connected) {
     status.textContent = "Connect a wristband to send a note to its screen.";
@@ -37,15 +37,14 @@ function setupWatchMessage(form) {
     button.disabled = true;
     status.textContent = "Sending…";
     try {
-      await postDevice("/message", { text });
+      await deviceCommand("/message", { params: { text } });
       input.value = "";
       updateCount();
       status.textContent = "Sent. It stays on the screen until they shake it away.";
     } catch (error) {
-      console.warn("Could not send the message:", error);
-      status.textContent = "Could not reach the wristband. Try again.";
+      status.textContent = `The note was not sent: ${error.message}`;
     } finally {
-      button.disabled = !deviceHost();
+      button.disabled = !deviceOnline();
     }
   });
 }

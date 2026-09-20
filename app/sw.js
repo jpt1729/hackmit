@@ -1,4 +1,4 @@
-const CACHE_NAME = "routine-anchor-v57";
+const CACHE_NAME = "routine-anchor-v66";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -9,16 +9,17 @@ const APP_SHELL = [
   "./js/alerts.js",
   "./js/api.js",
   "./js/checklist.js",
+  "./js/device.js",
   "./js/routine-editor.js",
   "./js/clock.js",
   "./js/progress.js",
-  "./js/contact.js",
   "./js/location-map.js",
   "./js/messages.js",
   "./js/timeline.js",
   "./data/demo.json",
   "./manifest.json",
-  "./icons/app-icon.svg"
+  "./icons/app-icon.svg",
+  "./icons/brainbuddy.png"
 ];
 
 self.addEventListener("install", (event) => {
